@@ -4,20 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math"
-	"net"
-	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"strings"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/lbryio/ytsync/v5/downloader/ytdl"
 	"github.com/lbryio/ytsync/v5/ip_manager"
-	"github.com/lbryio/ytsync/v5/sdk"
 	"github.com/lbryio/ytsync/v5/shared"
 	util2 "github.com/lbryio/ytsync/v5/util"
 
@@ -80,116 +74,6 @@ func GetVideoInformation(videoID string, stopChan stop.Chan, pool *ip_manager.IP
 	}
 
 	return video, nil
-}
-
-var errNotScraped = errors.Base("not yet scraped by caa.iti.gr")
-var errUploadTimeEmpty = errors.Base("upload time is empty")
-var errStatusParse = errors.Base("could not parse status, got number, need string")
-var errConnectionIssue = errors.Base("there was a connection issue with the api")
-
-func slack(format string, a ...interface{}) {
-	fmt.Printf(format+"\n", a...)
-	util.SendToSlack(format, a...)
-}
-
-func triggerScrape(videoID string, ip *net.TCPAddr) error {
-	//slack("Triggering scrape for %s", videoID)
-	u, err := url.Parse("https://caa.iti.gr/verify_videoV3")
-	q := u.Query()
-	q.Set("twtimeline", "0")
-	q.Set("url", "https://www.youtube.com/watch?v="+videoID)
-	u.RawQuery = q.Encode()
-	//slack("GET %s", u.String())
-
-	client := getClient(ip)
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
-	if err != nil {
-		return errors.Err(err)
-	}
-	req.Header.Set("User-Agent", ChromeUA)
-
-	res, err := client.Do(req)
-	if err != nil {
-		return errors.Err(err)
-	}
-	defer res.Body.Close()
-
-	var response struct {
-		Message  string `json:"message"`
-		Status   string `json:"status"`
-		VideoURL string `json:"video_url"`
-	}
-	err = json.NewDecoder(res.Body).Decode(&response)
-	if err != nil {
-		if strings.Contains(err.Error(), "cannot unmarshal number") {
-			return errors.Err(errStatusParse)
-		}
-		if strings.Contains(err.Error(), "no route to host") {
-			return errors.Err(errConnectionIssue)
-		}
-		return errors.Err(err)
-	}
-
-	switch response.Status {
-	case "removed_video":
-		return errors.Err("video previously removed from service")
-	case "no_video":
-		return errors.Err("they say 'video cannot be found'. wtf?")
-	default:
-		spew.Dump(response)
-	}
-
-	return nil
-	//https://caa.iti.gr/caa/api/v4/videos/reports/h-tuxHS5lSM
-}
-
-func getUploadTime(config *sdk.APIConfig, videoID string, ip *net.TCPAddr, uploadDate string) (string, error) {
-	//slack("Getting upload time for %s", videoID)
-	release, err := config.GetReleasedDate(videoID)
-	if err != nil {
-		logrus.Error(err)
-	}
-	ytdlUploadDate, err := time.Parse("20060102", uploadDate)
-	if err != nil {
-		logrus.Error(err)
-	}
-	if release != nil {
-		//const sqlTimeFormat = "2006-01-02 15:04:05"
-		sqlTime, err := time.ParseInLocation(time.RFC3339, release.ReleaseTime, time.UTC)
-		if err == nil {
-			hoursDiff := math.Abs(sqlTime.Sub(ytdlUploadDate).Hours())
-			if hoursDiff > 48 {
-				logrus.Infof("upload day from APIs differs from the ytdl one by more than 2 days.")
-			} else {
-				return sqlTime.Format(releaseTimeFormat), nil
-			}
-		} else {
-			logrus.Error(err)
-		}
-	}
-
-	return ytdlUploadDate.Format(releaseTimeFormat), nil
-}
-
-func getClient(ip *net.TCPAddr) *http.Client {
-	if ip == nil {
-		return http.DefaultClient
-	}
-
-	return &http.Client{
-		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				LocalAddr: ip,
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).DialContext,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-		},
-	}
 }
 
 const (
