@@ -1,14 +1,11 @@
 package ytapi
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -56,7 +53,7 @@ type VideoParams struct {
 var mostRecentlyFailedChannel string // TODO: fix this hack!
 
 func GetVideosToSync(channelID string, syncedVideos map[string]sdk.SyncedVideo, quickSync bool, maxVideos int, videoParams VideoParams, lastUploadedVideo string) ([]Video, error) {
-	var videos []Video
+	newMetadataVersion := int8(2)
 	if quickSync && maxVideos > 50 {
 		maxVideos = 50
 	}
@@ -67,7 +64,7 @@ func GetVideosToSync(channelID string, syncedVideos map[string]sdk.SyncedVideo, 
 	videoIDs := make([]string, 0, len(allVideos))
 	for _, video := range allVideos {
 		sv, ok := syncedVideos[video]
-		if ok && util.SubstringInSlice(sv.FailureReason, shared.NeverRetryFailures) {
+		if ok && (util.SubstringInSlice(sv.FailureReason, shared.NeverRetryFailures) || sv.Published && sv.MetadataVersion == newMetadataVersion) {
 			continue
 		}
 		videoIDs = append(videoIDs, video)
@@ -79,7 +76,9 @@ func GetVideosToSync(channelID string, syncedVideos map[string]sdk.SyncedVideo, 
 		playlistMap[videoID] = int64(i)
 	}
 	//this will ensure that we at least try to sync the video that was marked as last uploaded video in the database.
-	if lastUploadedVideo != "" {
+	sv, ok := syncedVideos[lastUploadedVideo]
+	shouldNotQueue := ok && (util.SubstringInSlice(sv.FailureReason, shared.NeverRetryFailures) || sv.Published && sv.MetadataVersion == newMetadataVersion)
+	if lastUploadedVideo != "" && !shouldNotQueue {
 		_, ok := playlistMap[lastUploadedVideo]
 		if !ok {
 			playlistMap[lastUploadedVideo] = 0
@@ -99,6 +98,7 @@ func GetVideosToSync(channelID string, syncedVideos map[string]sdk.SyncedVideo, 
 		return nil, err
 	}
 
+	var videos []Video
 	for _, item := range vids {
 		positionInList := playlistMap[item.ID]
 		videoToAdd, err := sources.NewYoutubeVideo(videoParams.VideoDir, item, positionInList, videoParams.Stopper, videoParams.IPPool)
@@ -109,7 +109,6 @@ func GetVideosToSync(channelID string, syncedVideos map[string]sdk.SyncedVideo, 
 	}
 
 	for k, v := range syncedVideos {
-		newMetadataVersion := int8(2)
 		if !v.Published && v.MetadataVersion >= newMetadataVersion {
 			continue
 		}
@@ -123,52 +122,7 @@ func GetVideosToSync(channelID string, syncedVideos map[string]sdk.SyncedVideo, 
 	return videos, nil
 }
 
-// CountVideosInChannel is unused for now... keeping it here just in case
-func CountVideosInChannel(channelID string) (int, error) {
-	url := "https://socialblade.com/youtube/channel/" + channelID
-
-	req, _ := http.NewRequest("GET", url, nil)
-
-	req.Header.Add("User-Agent", downloader.ChromeUA)
-	req.Header.Add("Accept", "*/*")
-	req.Header.Add("Host", "socialblade.com")
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return 0, errors.Err(err)
-	}
-	defer res.Body.Close()
-
-	var line string
-	scanner := bufio.NewScanner(res.Body)
-	for scanner.Scan() {
-		if strings.Contains(scanner.Text(), "youtube-stats-header-uploads") {
-			line = scanner.Text()
-			break
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		return 0, err
-	}
-	if line == "" {
-		return 0, errors.Err("upload count line not found")
-	}
-
-	matches := regexp.MustCompile(">([0-9]+)<").FindStringSubmatch(line)
-	if len(matches) != 2 {
-		return 0, errors.Err("upload count not found with regex")
-	}
-
-	num, err := strconv.Atoi(matches[1])
-	if err != nil {
-		return 0, errors.Err(err)
-	}
-
-	return num, nil
-}
-
-func ChannelInfo(channelID string) (*YoutubeStatsResponse, error) {
+func ChannelInfo(channelID string, attemptNo int) (*YoutubeStatsResponse, error) {
 	url := "https://www.youtube.com/channel/" + channelID + "/about"
 
 	req, _ := http.NewRequest("GET", url, nil)
@@ -186,6 +140,11 @@ func ChannelInfo(channelID string) (*YoutubeStatsResponse, error) {
 		return nil, errors.Err(err)
 	}
 	pageBody := string(body)
+	if strings.Contains(pageBody, "Our systems have detected unusual traffic from your computer network") {
+		log.Warnf("we got blocked by youtube, waiting %d hour(s) before attempt %d", attemptNo+1, attemptNo+2)
+		time.Sleep(time.Duration(attemptNo) * time.Hour)
+		return ChannelInfo(channelID, attemptNo+1)
+	}
 	dataStartIndex := strings.Index(pageBody, "window[\"ytInitialData\"] = ") + 26
 	if dataStartIndex == 25 {
 		dataStartIndex = strings.Index(pageBody, "var ytInitialData = ") + 20
@@ -222,6 +181,7 @@ func getVideos(channelID string, videoIDs []string, stopChan stop.Chan, ipPool *
 			return nil, errors.Err(err)
 		}
 		if state == "published" {
+			log.Errorf("this should never happen anymore because we check this earlier!")
 			continue
 		}
 		video, err := downloader.GetVideoInformation(videoID, stopChan, ipPool)
@@ -236,9 +196,9 @@ func getVideos(channelID string, videoIDs []string, stopChan stop.Chan, ipPool *
 			if errSDK != nil {
 				return nil, errors.Err(errSDK)
 			}
-		} else {
-			videos = append(videos, video)
+			continue
 		}
+		videos = append(videos, video)
 	}
 	return videos, nil
 }

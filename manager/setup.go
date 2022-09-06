@@ -393,18 +393,18 @@ func (s *Sync) ensureChannelOwnership() error {
 	}
 
 	if balance.LessThan(decimal.NewFromFloat(channelClaimAmount)) {
-		err = s.addCredits(channelClaimAmount + estimatedMaxTxFee*3)
+		err = s.addCredits(channelClaimAmount + estimatedMaxTxFee*3 + 5)
 		if err != nil {
 			return err
 		}
 	}
 
-	channelInfo, err := ytapi.ChannelInfo(s.DbChannelData.ChannelId)
+	channelInfo, err := ytapi.ChannelInfo(s.DbChannelData.ChannelId, 0)
 	if err != nil {
 		if strings.Contains(err.Error(), "invalid character 'e' looking for beginning of value") {
 			logUtils.SendInfoToSlack("failed to get channel data for %s. Waiting 1 minute to retry", s.DbChannelData.ChannelId)
 			time.Sleep(1 * time.Minute)
-			channelInfo, err = ytapi.ChannelInfo(s.DbChannelData.ChannelId)
+			channelInfo, err = ytapi.ChannelInfo(s.DbChannelData.ChannelId, 1)
 			if err != nil {
 				return err
 			}
