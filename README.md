@@ -1,7 +1,7 @@
 # YTSync Tool
-[![Build Status](https://travis-ci.com/lbryio/ytsync.svg?branch=master)](https://travis-ci.com/lbryio/ytsync)
+[![Build Status](https://travis-ci.com/OdyseeTeam/ytsync.svg?branch=master)](https://travis-ci.com/OdyseeTeam/ytsync)
 
-This tool serves lbry to parse youtube channels that want their content mirrored on LBRY.
+This tool serves Odysee to parse youtube channels that want their content mirrored on the LBRY blockchain.
 
 The tool downloads the entire set of public videos from a given channel, publishes them to LBRY and populates our private database in order to keep track of what's publishes.
 With the support of said database, the tool is also able to keep all the channels updated.
@@ -85,14 +85,15 @@ Contributions to this project are welcome, encouraged, and compensated. For more
 
 ## Security
 
-We take security seriously. Please contact [security@lbry.io](mailto:security@lbry.io) regarding any security issues. Our PGP key is [here](https://lbry.com/faq/pgp-key) if you need it.
+We take security seriously. Please contact [security@lbry.io](mailto:security@odysee.com) regarding any security issues.
 
 ## Contact
 
-The primary contact for this project is [Niko Storni](https://github.com/nikooo777) (niko@lbry.com).
+The primary contact for this project is [Niko Storni](https://github.com/nikooo777) (niko@odysee.com).
 
 ## Additional Info and Links
 
+- [https://odysee.com](https://odysee.com) - The Odysee website
 - [https://lbry.com](https://lbry.com) - The live LBRY website
 - [Discord Chat](https://chat.lbry.com) - A chat room for the LBRYians
 - [Email us](mailto:hello@lbry.com) - LBRY Support email
