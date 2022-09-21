@@ -117,11 +117,11 @@ func (v *YtdlVideo) GetUploadTime() time.Time {
 
 	ytdlReleaseDate, err := time.Parse("20060102", v.ReleaseDate)
 	if err != nil {
-		logrus.Error(err)
+		logrus.Warn(err)
 	}
 	ytdlUploadDate, err := time.Parse("20060102", v.UploadDate)
 	if err != nil {
-		logrus.Error(err)
+		logrus.Warn(err)
 	}
 	if !ytdlReleaseTimestamp.IsZero() {
 		v.uploadDateForReal = &ytdlReleaseTimestamp

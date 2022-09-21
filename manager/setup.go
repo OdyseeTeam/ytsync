@@ -134,7 +134,15 @@ func (s *Sync) walletSetup() error {
 		extraLBC := balance - requiredBalance
 		if extraLBC > 5 {
 			sendBackAmount := extraLBC - 1
-			logUtils.SendInfoToSlack("channel %s has %.1f credits which is %.1f more than it requires (%.1f). We should send at least %.1f that back.", s.DbChannelData.ChannelId, balance, extraLBC, requiredBalance, sendBackAmount)
+			account, err := s.getDefaultAccount()
+			if err != nil {
+				return errors.Err(err)
+			}
+			ts, err := s.daemon.AccountSend(&account, fmt.Sprintf("%.2f", sendBackAmount), "bPcPhyBeuiq5ZRquuxsGFTH1AQ69CMMkEz")
+			if err != nil {
+				return errors.Err(err)
+			}
+			logUtils.SendInfoToSlack("channel %s had %.1f credits which is %.1f more than it requires (%.1f). We should sent %.1f back. TxID: %s", s.DbChannelData.ChannelId, balance, extraLBC, requiredBalance, sendBackAmount, ts.Txid)
 		}
 	}
 

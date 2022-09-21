@@ -5,13 +5,14 @@ module github.com/lbryio/ytsync/v5
 replace github.com/btcsuite/btcd => github.com/lbryio/lbrycrd.go v0.0.0-20200203050410-e1076f12bf19
 
 //replace github.com/lbryio/lbry.go/v2 => /home/niko/go/src/github.com/lbryio/lbry.go/
+replace github.com/lbryio/lbry.go/v2 => github.com/OdyseeTeam/lbry.go/v2 v2.7.2-0.20220921205302-69cfd7f79875
+
 //replace github.com/lbryio/reflector.go => /home/niko/go/src/github.com/lbryio/reflector.go/
 
 require (
 	github.com/abadojack/whatlanggo v1.0.1
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
 	github.com/aws/aws-sdk-go v1.44.6
-	github.com/davecgh/go-spew v1.1.1
 	github.com/docker/docker v20.10.17+incompatible
 	github.com/lbryio/lbry.go/v2 v2.7.2-0.20220815204100-2adb8af5b68c
 	github.com/lbryio/reflector.go v1.1.3-0.20220730181028-f5d30b1a6e79
@@ -43,6 +44,7 @@ require (
 	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cheekybits/genny v1.0.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
