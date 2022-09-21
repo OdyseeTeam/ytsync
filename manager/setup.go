@@ -138,11 +138,27 @@ func (s *Sync) walletSetup() error {
 			if err != nil {
 				return errors.Err(err)
 			}
+
 			ts, err := s.daemon.AccountSend(&account, fmt.Sprintf("%.2f", sendBackAmount), "bPcPhyBeuiq5ZRquuxsGFTH1AQ69CMMkEz")
 			if err != nil {
-				return errors.Err(err)
+				if strings.Contains(err.Error(), "tx-size") { //TODO: this is a silly workaround...
+					_, spendErr := s.daemon.TxoSpend(util.PtrToString("other"), nil, nil, nil, nil, &account)
+					if spendErr != nil {
+						return errors.Prefix("something went wrong while refunding extra credits", err)
+					}
+					err = s.waitForNewBlock()
+					if err != nil {
+						return errors.Prefix("something went wrong while refunding extra credits", err)
+					}
+					ts, err = s.daemon.AccountSend(&account, fmt.Sprintf("%.2f", sendBackAmount), "bPcPhyBeuiq5ZRquuxsGFTH1AQ69CMMkEz")
+					if err != nil {
+						return errors.Err(err)
+					}
+				} else {
+					return errors.Err(err)
+				}
 			}
-			logUtils.SendInfoToSlack("channel %s had %.1f credits which is %.1f more than it requires (%.1f). We should sent %.1f back. TxID: %s", s.DbChannelData.ChannelId, balance, extraLBC, requiredBalance, sendBackAmount, ts.Txid)
+			logUtils.SendInfoToSlack("channel %s had %.1f credits which is %.1f more than it requires (%.1f). We sent %.1f back. TxID: %s", s.DbChannelData.ChannelId, balance, extraLBC, requiredBalance, sendBackAmount, ts.Txid)
 		}
 	}
 
