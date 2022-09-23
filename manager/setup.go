@@ -130,7 +130,7 @@ func (s *Sync) walletSetup() error {
 		if err != nil {
 			return errors.Err(err)
 		}
-	} else if balance > requiredBalance {
+	} else if balance > requiredBalance && s.DbChannelData.TransferState == shared.TransferStateManual {
 		extraLBC := balance - requiredBalance
 		if extraLBC > 5 {
 			sendBackAmount := extraLBC - 1
@@ -478,7 +478,7 @@ func (s *Sync) ensureChannelOwnership() error {
 		if err != nil {
 			return err
 		}
-		if s.DbChannelData.TransferState <= 1 {
+		if s.DbChannelData.TransferState <= shared.TransferStatePending {
 			c, err = s.daemon.ChannelUpdate(s.DbChannelData.ChannelClaimID, jsonrpc.ChannelUpdateOptions{
 				ClearTags:      util.PtrToBool(true),
 				ClearLocations: util.PtrToBool(true),

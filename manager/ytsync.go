@@ -197,7 +197,7 @@ func (s *Sync) FullCycle() (e error) {
 
 func (s *Sync) processTransfers() (e error) {
 	log.Println("Processing transfers")
-	if s.DbChannelData.TransferState != 2 {
+	if s.DbChannelData.TransferState != shared.TransferStateComplete {
 		err := waitConfirmations(s)
 		if err != nil {
 			return err
@@ -267,7 +267,7 @@ func deleteSyncFolder(videoDirectory string) {
 }
 
 func (s *Sync) shouldTransfer() bool {
-	return s.DbChannelData.TransferState >= 1 && s.DbChannelData.PublishAddress.Address != "" && !s.Manager.CliFlags.DisableTransfers && s.DbChannelData.TransferState != 3
+	return s.DbChannelData.TransferState >= shared.TransferStatePending && s.DbChannelData.PublishAddress.Address != "" && !s.Manager.CliFlags.DisableTransfers && s.DbChannelData.TransferState != 3
 }
 
 func (s *Sync) setChannelTerminationStatus(e *error) {
@@ -495,7 +495,7 @@ func (s *Sync) updateRemoteDB(claims []jsonrpc.Claim, ownClaims []jsonrpc.Claim)
 		claimNameDiffers := claimInDatabase && sv.ClaimName != chainInfo.ClaimName
 		claimMarkedUnpublished := claimInDatabase && !sv.Published
 		_, isOwnClaim := ownClaimsInfo[videoID]
-		transferred := !isOwnClaim || s.DbChannelData.TransferState == 3
+		transferred := !isOwnClaim || s.DbChannelData.TransferState == shared.TransferStateManual
 		transferStatusMismatch := claimInDatabase && sv.Transferred != transferred
 
 		if metadataDiffers {
@@ -1010,7 +1010,7 @@ func (s *Sync) getUnsentSupports() (float64, error) {
 	if err != nil {
 		return 0, errors.Err(err)
 	}
-	if s.DbChannelData.TransferState == 2 {
+	if s.DbChannelData.TransferState == shared.TransferStateComplete {
 		balance, err := s.daemon.AccountBalance(&defaultAccount)
 		if err != nil {
 			return 0, err
@@ -1041,7 +1041,7 @@ func (s *Sync) getUnsentSupports() (float64, error) {
 				}
 			}
 		}
-		if balanceAmount > 10 && sentSupports < 1 && s.DbChannelData.TransferState > 1 {
+		if balanceAmount > 10 && sentSupports < 1 && s.DbChannelData.TransferState > shared.TransferStatePending {
 			logUtils.SendErrorToSlack("(%s) this channel has quite some LBCs in it (%.2f) and %.2f LBC in sent tips, it's likely that the tips weren't actually sent or the wallet has unnecessary extra credits in it", s.DbChannelData.ChannelId, balanceAmount, sentSupports)
 			return balanceAmount - 10, nil
 		}
