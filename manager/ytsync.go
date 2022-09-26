@@ -170,6 +170,13 @@ func (s *Sync) FullCycle() (e error) {
 			return err
 		}
 	}
+
+	//TODO: THIS IS A TEMPORARY WORK AROUND FOR THE STUPID IP LOCKUP BUG
+	ipPool, _ := ip_manager.GetIPPool(s.grp)
+	if ipPool != nil {
+		ipPool.ReleaseAll()
+	}
+
 	log.Printf("Starting daemon")
 	err = logUtils.StartDaemon()
 	if err != nil {

@@ -9,7 +9,6 @@ import (
 
 	"github.com/lbryio/ytsync/v5/blobs_reflector"
 	"github.com/lbryio/ytsync/v5/configs"
-	"github.com/lbryio/ytsync/v5/ip_manager"
 	"github.com/lbryio/ytsync/v5/namer"
 	"github.com/lbryio/ytsync/v5/sdk"
 	"github.com/lbryio/ytsync/v5/shared"
@@ -123,11 +122,6 @@ func (s *SyncManager) Start() error {
 			shouldNotCount := false
 			logUtils.SendInfoToSlack("Syncing %s (%s) to LBRY! total processed channels since startup: %d", sync.DbChannelData.DesiredChannelName, sync.DbChannelData.ChannelId, syncCount+1)
 			err := sync.FullCycle()
-			//TODO: THIS IS A TEMPORARY WORK AROUND FOR THE STUPID IP LOCKUP BUG
-			ipPool, _ := ip_manager.GetIPPool(sync.grp)
-			if ipPool != nil {
-				ipPool.ReleaseAll()
-			}
 
 			if err != nil {
 				if strings.Contains(err.Error(), "quotaExceeded") {
