@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/lbryio/ytsync/v5/configs"
 	"github.com/lbryio/ytsync/v5/ip_manager"
 	"github.com/lbryio/ytsync/v5/namer"
 	"github.com/lbryio/ytsync/v5/sdk"
@@ -163,6 +164,12 @@ func (s *Sync) FullCycle() (e error) {
 	}
 
 	defer deleteSyncFolder(s.videoDirectory)
+	if configs.Configuration.UseVpn {
+		err = logUtils.StartVpn()
+		if err != nil {
+			return err
+		}
+	}
 	log.Printf("Starting daemon")
 	err = logUtils.StartDaemon()
 	if err != nil {
@@ -336,6 +343,16 @@ func (s *Sync) waitForDaemonStart() error {
 }
 
 func (s *Sync) stopAndUploadWallet(e *error) {
+	if configs.Configuration.UseVpn {
+		err := logUtils.StopVpn()
+		if err != nil {
+			if *e == nil {
+				*e = err
+			} else {
+				*e = errors.Prefix(fmt.Sprintf("%s + original error", errors.FullTrace(err)), *e)
+			}
+		}
+	}
 	log.Println("Stopping daemon")
 	shutdownErr := logUtils.StopDaemon()
 	if shutdownErr != nil {

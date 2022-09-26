@@ -165,6 +165,22 @@ func IsLbrynetRunning() (bool, error) {
 	return running, nil
 }
 
+func StopVpn() error {
+	err := exec.Command("/usr/bin/sudo", "/bin/systemctl", "stop", "vpn.service").Run()
+	if err != nil {
+		return errors.Err(err)
+	}
+	return nil
+}
+
+func StartVpn() error {
+	err := exec.Command("/usr/bin/sudo", "/bin/systemctl", "start", "vpn.service").Run()
+	if err != nil {
+		return errors.Err(err)
+	}
+	return nil
+}
+
 func CleanForStartup() error {
 	if !IsRegTest() {
 		return errors.Err("never cleanup wallet outside of regtest and with caution. this should only be done in local testing and requires regtest to be on")
