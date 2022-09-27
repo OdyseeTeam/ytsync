@@ -46,8 +46,8 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/DataDog/datadog-go v2.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/Microsoft/go-winio v0.5.1 h1:aPJp2QD7OOrhO5tQXqQoGSJc+DjDtWTGLOmNyAm6FgY=
 github.com/Microsoft/go-winio v0.5.1/go.mod h1:JPGBdM1cNvN/6ISo+n8V5iA4v8pBzdOpzfwIujj1a84=
-github.com/OdyseeTeam/lbry.go/v2 v2.7.2-0.20220927182102-73228d1bfb86 h1:24ANqEC20uIZO8Gd7uoR79nVT5Bk33v7dJMccvC9EiE=
-github.com/OdyseeTeam/lbry.go/v2 v2.7.2-0.20220927182102-73228d1bfb86/go.mod h1:YsNY6a6g2Edl14sBUgXx71c6TyoOm8jDvkzcoNHLSXE=
+github.com/OdyseeTeam/lbry.go/v2 v2.7.2-0.20220927193513-014adbb315af h1:mc/eNxR2XFoneeSugTg0wvxPXEJ2IKvnRCdICxozms0=
+github.com/OdyseeTeam/lbry.go/v2 v2.7.2-0.20220927193513-014adbb315af/go.mod h1:YsNY6a6g2Edl14sBUgXx71c6TyoOm8jDvkzcoNHLSXE=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
 github.com/StackExchange/wmi v1.2.1/go.mod h1:rcmrprowKIVzvc+NUiLncP2uuArMWLCbu9SBzvHz7e8=
 github.com/VividCortex/ewma v1.2.0 h1:f58SaIzcDXrSy3kWaHNvuJgJ3Nmz59Zji6XoJR/q1ow=

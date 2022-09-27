@@ -360,7 +360,6 @@ func (s *Sync) stopAndUploadWallet(e *error) {
 				*e = errors.Prefix(fmt.Sprintf("%s + original error", errors.FullTrace(err)), *e)
 			}
 		}
-		time.Sleep(10 * time.Second) //to avoid interface issues
 		log.Println("Vpn stopped")
 	}
 	log.Println("Stopping daemon")

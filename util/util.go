@@ -170,6 +170,7 @@ func StopVpn() error {
 	if err != nil {
 		return errors.Err(err)
 	}
+	time.Sleep(10 * time.Second) //to avoid interface issues
 	return nil
 }
 
@@ -178,6 +179,7 @@ func StartVpn() error {
 	if err != nil {
 		return errors.Err(err)
 	}
+	time.Sleep(10 * time.Second) //to avoid interface issues
 	return nil
 }
 
