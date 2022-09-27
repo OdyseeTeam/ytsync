@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -29,16 +30,29 @@ type APIConfig struct {
 	ApiURL   string
 	ApiToken string
 	HostName string
+	client   *http.Client
 }
 
 var instance *APIConfig
 
 func GetAPIsConfigs() *APIConfig {
 	if instance == nil {
+		c := &http.Client{
+			Transport: &http.Transport{
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+				}).DialContext,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ResponseHeaderTimeout: 10 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+			},
+		}
 		instance = &APIConfig{
 			ApiURL:   configs.Configuration.InternalApisEndpoint,
 			ApiToken: configs.Configuration.InternalApisAuthToken,
 			HostName: configs.Configuration.GetHostname(),
+			client:   c,
 		}
 	}
 	return instance
@@ -51,7 +65,7 @@ func (a *APIConfig) FetchChannels(status string, cliFlags *shared.SyncFlags) ([]
 		Data    []shared.YoutubeChannel `json:"data"`
 	}
 	endpoint := a.ApiURL + "/yt/jobs"
-	res, err := http.PostForm(endpoint, url.Values{
+	res, err := a.client.PostForm(endpoint, url.Values{
 		"auth_token":  {a.ApiToken},
 		"sync_status": {status},
 		"min_videos":  {strconv.Itoa(1)},
@@ -115,7 +129,7 @@ func (a *APIConfig) SetChannelCert(certHex string, channelID string) error {
 
 	endpoint := a.ApiURL + "/yt/channel_cert"
 
-	res, err := http.PostForm(endpoint, url.Values{
+	res, err := a.client.PostForm(endpoint, url.Values{
 		"channel_claim_id": {channelID},
 		"channel_cert":     {certHex},
 		"auth_token":       {a.ApiToken},
@@ -164,7 +178,7 @@ func (a *APIConfig) SetChannelStatus(channelID string, status string, failureRea
 	if transferState != nil {
 		params.Add("transfer_state", strconv.Itoa(*transferState))
 	}
-	res, err := http.PostForm(endpoint, params)
+	res, err := a.client.PostForm(endpoint, params)
 	if err != nil {
 		util.SendErrorToSlack("error while trying to call %s. Waiting to retry: %s", endpoint, err.Error())
 		time.Sleep(30 * time.Second)
@@ -207,7 +221,7 @@ func (a *APIConfig) SetChannelClaimID(channelID string, channelClaimID string) e
 		Data    string      `json:"data"`
 	}
 	endpoint := a.ApiURL + "/yt/set_channel_claim_id"
-	res, err := http.PostForm(endpoint, url.Values{
+	res, err := a.client.PostForm(endpoint, url.Values{
 		"channel_id":       {channelID},
 		"auth_token":       {a.ApiToken},
 		"channel_claim_id": {channelClaimID},
@@ -252,7 +266,7 @@ func (a *APIConfig) DeleteVideos(videos []string) error {
 		"video_ids":  {videoIDs},
 		"auth_token": {a.ApiToken},
 	}
-	res, err := http.PostForm(endpoint, vals)
+	res, err := a.client.PostForm(endpoint, vals)
 	if err != nil {
 		util.SendErrorToSlack("error while trying to call %s. Waiting to retry: %s", endpoint, err.Error())
 		time.Sleep(30 * time.Second)
@@ -315,7 +329,7 @@ func (a *APIConfig) MarkVideoStatus(status shared.VideoStatus) error {
 	if status.IsTransferred != nil {
 		vals.Add("transferred", strconv.FormatBool(*status.IsTransferred))
 	}
-	res, err := http.PostForm(endpoint, vals)
+	res, err := a.client.PostForm(endpoint, vals)
 	if err != nil {
 		util.SendErrorToSlack("error while trying to call %s. Waiting to retry: %s", endpoint, err.Error())
 		time.Sleep(30 * time.Second)
@@ -354,7 +368,7 @@ func (a *APIConfig) VideoState(videoID string) (string, error) {
 		"auth_token": {a.ApiToken},
 	}
 
-	res, err := http.PostForm(endpoint, vals)
+	res, err := a.client.PostForm(endpoint, vals)
 	if err != nil {
 		util.SendErrorToSlack("error while trying to call %s. Waiting to retry: %s", endpoint, err.Error())
 		time.Sleep(30 * time.Second)
@@ -405,7 +419,7 @@ func (a *APIConfig) GetReleasedDate(videoID string) (*VideoRelease, error) {
 		"auth_token": {a.ApiToken},
 	}
 
-	res, err := http.PostForm(endpoint, vals)
+	res, err := a.client.PostForm(endpoint, vals)
 	if err != nil {
 		util.SendErrorToSlack("error while trying to call %s. Waiting to retry: %s", endpoint, err.Error())
 		time.Sleep(30 * time.Second)

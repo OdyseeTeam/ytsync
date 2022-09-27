@@ -1,8 +1,11 @@
 package configs
 
 import (
+	"net"
+	"net/http"
 	"os"
 	"regexp"
+	"time"
 
 	"github.com/lbryio/lbry.go/v2/extras/errors"
 
@@ -48,11 +51,25 @@ func Init(configPath string) error {
 }
 
 func (s *S3Configs) GetS3AWSConfig() *aws.Config {
+	c := &http.Client{
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		},
+	}
 	return &aws.Config{
 		Credentials:      credentials.NewStaticCredentials(s.ID, s.Secret, ""),
 		Region:           &s.Region,
 		Endpoint:         &s.Endpoint,
 		S3ForcePathStyle: aws.Bool(true),
+		//Logger:           aws.NewDefaultLogger(),
+		//LogLevel:         aws.LogLevel(aws.LogDebug),
+		HTTPClient: c,
 	}
 }
 func (c *Configs) GetHostname() string {
