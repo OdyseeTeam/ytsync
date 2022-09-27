@@ -359,6 +359,7 @@ func (s *Sync) stopAndUploadWallet(e *error) {
 				*e = errors.Prefix(fmt.Sprintf("%s + original error", errors.FullTrace(err)), *e)
 			}
 		}
+		time.Sleep(5 * time.Second) //to avoid interface issues
 	}
 	log.Println("Stopping daemon")
 	shutdownErr := logUtils.StopDaemon()

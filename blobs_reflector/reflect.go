@@ -3,6 +3,7 @@ package blobs_reflector
 import (
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -89,5 +90,6 @@ func reflectBlobs() error {
 	if uploader.GetSummary().Err > 0 {
 		return errors.Err("not al blobs were reflected. Errors: %d", uploader.GetSummary().Err)
 	}
+	log.Println("done reflecting blobs")
 	return nil
 }

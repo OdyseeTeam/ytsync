@@ -230,6 +230,7 @@ func CleanForStartup() error {
 
 func CleanupLbrynet() error {
 	//make sure lbrynet is off
+	log.Println("cleaning up lbrynet directories...")
 	running, err := IsLbrynetRunning()
 	if err != nil {
 		return err

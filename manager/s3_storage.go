@@ -195,6 +195,7 @@ func (s *Sync) getBlockchainDBPaths() (defaultDB, tempDB string, key *string, er
 }
 
 func (s *Sync) uploadWallet() error {
+	log.Println("uploading wallet to S3...")
 	defaultWalletDir := util.GetDefaultWalletPath()
 	key := aws.String("/wallets/" + s.DbChannelData.ChannelId)
 	if util.IsRegTest() {
@@ -239,6 +240,7 @@ func (s *Sync) uploadWallet() error {
 }
 
 func (s *Sync) uploadBlockchainDB() error {
+	log.Println("uploading blockchain db to S3...")
 	defaultBDBDir, _, key, err := s.getBlockchainDBPaths()
 	if err != nil {
 		return errors.Err(err)
