@@ -226,6 +226,7 @@ func (s *Sync) uploadWallet() error {
 			Body:   file,
 		})
 		if err != nil {
+			log.Printf("error uploading wallet to S3, retrying in 30 seconds. %s", err.Error())
 			time.Sleep(30 * time.Second)
 			continue
 		}

@@ -351,6 +351,7 @@ func (s *Sync) waitForDaemonStart() error {
 
 func (s *Sync) stopAndUploadWallet(e *error) {
 	if configs.Configuration.UseVpn {
+		log.Println("Stopping vpn...")
 		err := logUtils.StopVpn()
 		if err != nil {
 			if *e == nil {
@@ -360,6 +361,7 @@ func (s *Sync) stopAndUploadWallet(e *error) {
 			}
 		}
 		time.Sleep(5 * time.Second) //to avoid interface issues
+		log.Println("Vpn stopped")
 	}
 	log.Println("Stopping daemon")
 	shutdownErr := logUtils.StopDaemon()
