@@ -413,6 +413,7 @@ func (v *YoutubeVideo) download() error {
 	}
 	return nil
 }
+
 func (v *YoutubeVideo) monitorSlowDownload(ticker *time.Ticker, stop *stop.Group, address string, cmd *exec.Cmd) {
 	count := 0
 	lastSize := int64(0)
