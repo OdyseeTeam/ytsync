@@ -23,6 +23,7 @@ type DownloadResults struct {
 	WasThrottled     bool
 	ReduceResolution bool
 	ChangeUserAgent  bool
+	Successful       bool
 	KnownError       error
 }
 
@@ -51,7 +52,7 @@ func rawDownload(args []string) (*DownloadResults, error) {
 	if err != nil && !strings.Contains(err.Error(), "exit status 1") {
 		return nil, errors.Err(err)
 	}
-	if parsedFailure != nil {
+	if errors.Unwrap(parsedFailure) != nil {
 		dr := &DownloadResults{
 			KnownError: parsedFailure,
 		}
@@ -69,7 +70,7 @@ func rawDownload(args []string) (*DownloadResults, error) {
 		dr := &DownloadResults{
 			KnownError: parsedOut,
 		}
-		switch parsedOut {
+		switch errors.Unwrap(parsedOut) {
 		case ThrottledErr:
 			dr.WasThrottled = true
 			dr.CouldRetry = true
@@ -82,7 +83,7 @@ func rawDownload(args []string) (*DownloadResults, error) {
 		return dr, nil
 	}
 
-	return nil, nil
+	return &DownloadResults{Successful: true}, nil
 }
 
 var (
@@ -99,6 +100,9 @@ func parseFailureReason(errLog string) error {
 	const FragmentsRetriesMsg = "giving up after 0 fragment retries"
 	const UAVideoDataExtractMsg = "YouTube said: Unable to extract video data"
 
+	if errLog == "" {
+		return nil
+	}
 	if strings.Contains(errLog, ThrottledMsg) {
 		return errors.Err(ThrottledErr)
 	}
@@ -116,10 +120,12 @@ func parseFailureReason(errLog string) error {
 
 func parseOutLog(outLog string) error {
 	log.Debugln(outLog)
-	const DurationConstraintMsg = "does not pass filter duration"
+	const DurationConstraintMsg = "does not pass filter (duration"
 	const SizeConstraintMsg = "File is larger than max-filesize"
 	const ThrottledMsg = "HTTP Error 429"
-
+	if outLog == "" {
+		return nil
+	}
 	if strings.Contains(outLog, DurationConstraintMsg) {
 		return errors.Err(VideoTooLongErr)
 	}
@@ -217,8 +223,10 @@ func (v *YoutubeVideo) Xdownload() error {
 	}
 
 	qualityIndex := len(qualities) - 1
+	remainingAttempts := 3
 
-	for {
+	for remainingAttempts > 0 {
+		remainingAttempts--
 		res, usedIp, err := func() (*DownloadResults, string, error) {
 			sourceAddress, err := v.getSourceAddress()
 			if err != nil {
@@ -232,7 +240,11 @@ func (v *YoutubeVideo) Xdownload() error {
 				"--source-address",
 				sourceAddress,
 			)
+			dlStopGrp := stop.New()
+			go v.trackProgressBar(dynamicArgs, metadata, dlStopGrp, sourceAddress)
 			res, err := rawDownload(dynamicArgs)
+			//stop the progress bar
+			dlStopGrp.Stop()
 			return res, sourceAddress, err
 		}()
 		if err != nil {
@@ -269,28 +281,13 @@ func (v *YoutubeVideo) Xdownload() error {
 				continue
 			}
 			if res.WasThrottled {
+				remainingAttempts++
 				v.pool.SetThrottled(usedIp)
 				continue
 			}
 		}
 		_ = v.delete(res.KnownError.Error())
 		return res.KnownError
-	}
-	//speedThrottleRetries := 3
-	for i := 0; i < len(qualities); i++ {
-
-		dlStopGrp := stop.New()
-		ticker := time.NewTicker(400 * time.Millisecond)
-		go v.trackProgressBar(argsWithFilters, ticker, metadata, dlStopGrp, sourceAddress)
-
-		//ticker2 := time.NewTicker(10 * time.Second)
-		//v.monitorSlowDownload(ticker, dlStopGrp, sourceAddress, cmd)
-
-		//stop the progress bar
-		ticker.Stop()
-		dlStopGrp.Stop()
-
-		break
 	}
 	return nil
 }
