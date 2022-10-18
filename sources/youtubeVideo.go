@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/lbryio/ytsync/v5/downloader"
@@ -412,42 +411,11 @@ func (v *YoutubeVideo) download() error {
 	return nil
 }
 
-func (v *YoutubeVideo) monitorSlowDownload(ticker *time.Ticker, stop *stop.Group, address string, cmd *exec.Cmd) {
-	count := 0
-	lastSize := int64(0)
-	for {
-		select {
-		case <-stop.Ch():
-			return
-		case <-ticker.C:
-			size, err := logUtils.DirSize(v.videoDir())
-			if err != nil {
-				log.Errorf("error while getting size of download directory: %s", errors.FullTrace(err))
-				continue
-			}
-			delta := size - lastSize
-			avgSpeed := delta / 10
-			if avgSpeed < 200*1024 { //200 KB/s
-				count++
-			} else {
-				count--
-			}
-			if count > 3 {
-				err := cmd.Process.Signal(syscall.SIGKILL)
-				if err != nil {
-					log.Errorf("failure in killing slow download: %s", errors.Err(err))
-					return
-				}
-			}
-		}
-	}
-}
-
 func (v *YoutubeVideo) trackProgressBar(argsWithFilters []string, metadata *ytMetadata, done *stop.Group, sourceAddress string) {
 	v.progressBarWg.Add(1)
 	defer v.progressBarWg.Done()
 	ticker := time.NewTicker(1 * time.Second)
-	ticker.Stop()
+	defer ticker.Stop()
 	//attempt getting size of the video before downloading
 	cmd := exec.Command("yt-dlp", append(argsWithFilters, "-s")...)
 	stdout, err := cmd.StdoutPipe()
@@ -780,6 +748,7 @@ func (v *YoutubeVideo) Sync(daemon *jsonrpc.Client, params SyncParams, existingV
 func (v *YoutubeVideo) downloadAndPublish(daemon *jsonrpc.Client, params SyncParams) (*SyncSummary, error) {
 	var err error
 	if v.youtubeInfo == nil {
+		logUtils.SendErrorToSlack("hardcoded fix for %s - %s playlist position: %d", v.id, v.title, v.playlistPosition)
 		return nil, errors.Err("Video is not available - hardcoded fix")
 	}
 
@@ -806,7 +775,7 @@ func (v *YoutubeVideo) downloadAndPublish(daemon *jsonrpc.Client, params SyncPar
 		return nil, errors.Err("livestream is likely bugged as it was recently published and has a length of %s which is more than 2 hours", dur.String())
 	}
 	for {
-		err = v.download()
+		err = v.Xdownload()
 		if err != nil && strings.Contains(err.Error(), "HTTP Error 429") {
 			continue
 		} else if err != nil {

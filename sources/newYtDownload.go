@@ -7,14 +7,17 @@ import (
 	"os/exec"
 	"path"
 	"strings"
+	"syscall"
 	"time"
 
-	"github.com/lbryio/lbry.go/v2/extras/errors"
-	"github.com/lbryio/lbry.go/v2/extras/stop"
 	"github.com/lbryio/ytsync/v5/downloader"
 	"github.com/lbryio/ytsync/v5/ip_manager"
 	"github.com/lbryio/ytsync/v5/timing"
 	logUtils "github.com/lbryio/ytsync/v5/util"
+
+	"github.com/lbryio/lbry.go/v2/extras/errors"
+	"github.com/lbryio/lbry.go/v2/extras/stop"
+	
 	log "github.com/sirupsen/logrus"
 )
 
@@ -27,7 +30,7 @@ type DownloadResults struct {
 	KnownError       error
 }
 
-func rawDownload(args []string) (*DownloadResults, error) {
+func rawDownload(args []string, dir string) (*DownloadResults, error) {
 	log.Printf("Running command yt-dlp %s", strings.Join(args, " "))
 	cmd := exec.Command("yt-dlp", args...)
 
@@ -43,10 +46,12 @@ func rawDownload(args []string) (*DownloadResults, error) {
 	if err != nil {
 		return nil, errors.Err(err)
 	}
-
+	monitorStopGrp := stop.New()
+	go detectSlowDownload(dir, monitorStopGrp, cmd)
 	errorLog, _ := ioutil.ReadAll(stderr)
 	outLog, _ := ioutil.ReadAll(stdout)
 	err = cmd.Wait()
+	monitorStopGrp.Stop()
 	parsedFailure := parseFailureReason(string(errorLog))
 	parsedOut := parseOutLog(string(outLog))
 	if err != nil && !strings.Contains(err.Error(), "exit status 1") {
@@ -86,6 +91,44 @@ func rawDownload(args []string) (*DownloadResults, error) {
 	return &DownloadResults{Successful: true}, nil
 }
 
+func detectSlowDownload(path string, stop *stop.Group, cmd *exec.Cmd) {
+	stop.Add(1)
+	defer stop.Done()
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	count := 0
+	lastSize := int64(0)
+	for {
+		select {
+		case <-stop.Ch():
+			return
+		case <-ticker.C:
+			size, err := logUtils.DirSize(path)
+			if err != nil {
+				log.Errorf("error while getting size of download directory: %s", errors.FullTrace(err))
+				continue
+			}
+			delta := size - lastSize
+			lastSize = size
+			avgSpeed := delta / 10
+			//log.Infof("download speed: %d bytes/s - min speed: %d", avgSpeed, 30*1024*1000)
+			if avgSpeed < 30*1024 { //30 KB/s
+				count++
+			} else if count > 0 {
+				count--
+			}
+			if count > 3 {
+				err := cmd.Process.Signal(syscall.SIGKILL)
+				if err != nil {
+					log.Errorf("failure in killing slow download: %s", errors.Err(err))
+					return
+				}
+				return
+			}
+		}
+	}
+}
+
 var (
 	ThrottledErr        = errors.Base("throttled")
 	FragmentsRetriesErr = errors.Base("missing fragments")
@@ -94,11 +137,16 @@ var (
 	VideoTooBigErr      = errors.Base("the video is too big to sync, skipping for now")
 )
 
+const (
+	ThrottledMsg          = "HTTP Error 429"
+	AltThrottledMsg       = "returned non-zero exit status 8"
+	FragmentsRetriesMsg   = "giving up after 0 fragment retries"
+	UAVideoDataExtractMsg = "YouTube said: Unable to extract video data"
+	DurationConstraintMsg = "does not pass filter (duration"
+	SizeConstraintMsg     = "File is larger than max-filesize"
+)
+
 func parseFailureReason(errLog string) error {
-	const ThrottledMsg = "HTTP Error 429"
-	const AltThrottledMsg = "returned non-zero exit status 8"
-	const FragmentsRetriesMsg = "giving up after 0 fragment retries"
-	const UAVideoDataExtractMsg = "YouTube said: Unable to extract video data"
 
 	if errLog == "" {
 		return nil
@@ -120,9 +168,6 @@ func parseFailureReason(errLog string) error {
 
 func parseOutLog(outLog string) error {
 	log.Debugln(outLog)
-	const DurationConstraintMsg = "does not pass filter (duration"
-	const SizeConstraintMsg = "File is larger than max-filesize"
-	const ThrottledMsg = "HTTP Error 429"
 	if outLog == "" {
 		return nil
 	}
@@ -242,7 +287,7 @@ func (v *YoutubeVideo) Xdownload() error {
 			)
 			dlStopGrp := stop.New()
 			go v.trackProgressBar(dynamicArgs, metadata, dlStopGrp, sourceAddress)
-			res, err := rawDownload(dynamicArgs)
+			res, err := rawDownload(dynamicArgs, v.videoDir())
 			//stop the progress bar
 			dlStopGrp.Stop()
 			return res, sourceAddress, err
