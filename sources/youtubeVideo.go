@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/lbryio/ytsync/v5/downloader"
@@ -344,8 +343,7 @@ func (v *YoutubeVideo) download() error {
 
 		dlStopGrp := stop.New()
 
-		ticker := time.NewTicker(400 * time.Millisecond)
-		go v.trackProgressBar(argsWithFilters, ticker, metadata, dlStopGrp, sourceAddress)
+		go v.trackProgressBar(argsWithFilters, metadata, dlStopGrp, sourceAddress)
 
 		//ticker2 := time.NewTicker(10 * time.Second)
 		//v.monitorSlowDownload(ticker, dlStopGrp, sourceAddress, cmd)
@@ -355,7 +353,6 @@ func (v *YoutubeVideo) download() error {
 		err = cmd.Wait()
 
 		//stop the progress bar
-		ticker.Stop()
 		dlStopGrp.Stop()
 
 		if err != nil {
@@ -413,132 +410,102 @@ func (v *YoutubeVideo) download() error {
 	}
 	return nil
 }
-func (v *YoutubeVideo) monitorSlowDownload(ticker *time.Ticker, stop *stop.Group, address string, cmd *exec.Cmd) {
-	count := 0
-	lastSize := int64(0)
+
+func (v *YoutubeVideo) trackProgressBar(argsWithFilters []string, metadata *ytMetadata, done *stop.Group, sourceAddress string) {
+	v.progressBarWg.Add(1)
+	defer v.progressBarWg.Done()
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	//attempt getting size of the video before downloading
+	cmd := exec.Command("yt-dlp", append(argsWithFilters, "-s")...)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Errorf("error while getting final file size: %s", errors.FullTrace(err))
+		return
+	}
+
+	if err := cmd.Start(); err != nil {
+		log.Errorf("error while getting final file size: %s", errors.FullTrace(err))
+		return
+	}
+	outLog, _ := ioutil.ReadAll(stdout)
+	err = cmd.Wait()
+	output := string(outLog)
+	parts := strings.Split(output, ": ")
+	if len(parts) != 3 {
+		log.Errorf("couldn't parse audio and video parts from the output (%s)", output)
+		return
+	}
+	formats := strings.Split(parts[2], "+")
+	if len(formats) != 2 {
+		log.Errorf("couldn't parse formats from the output (%s)", output)
+		return
+	}
+	log.Debugf("'%s'", output)
+	videoFormat := formats[0]
+	audioFormat := strings.Replace(formats[1], "\n", "", -1)
+
+	videoSize := 0
+	audioSize := 0
+	if metadata != nil {
+		for _, f := range metadata.Formats {
+			if f.FormatID == videoFormat {
+				videoSize = f.Filesize
+			}
+			if f.FormatID == audioFormat {
+				audioSize = f.Filesize
+			}
+		}
+	}
+
+	log.Debugf("(%s) - videoSize: %d (%s), audiosize: %d (%s)", v.id, videoSize, videoFormat, audioSize, audioFormat)
+	bar := v.progressBars.AddBar(int64(videoSize+audioSize),
+		mpb.PrependDecorators(
+			decor.CountersKibiByte("% .2f / % .2f "),
+			// simple name decorator
+			decor.Name(fmt.Sprintf("id: %s src-ip: (%s)", v.id, sourceAddress)),
+			// decor.DSyncWidth bit enables column width synchronization
+			decor.Percentage(decor.WCSyncSpace),
+		),
+		mpb.AppendDecorators(
+			decor.EwmaETA(decor.ET_STYLE_GO, 90),
+			decor.Name(" ] "),
+			decor.EwmaSpeed(decor.UnitKiB, "% .2f ", 60),
+			decor.OnComplete(
+				// ETA decorator with ewma age of 60
+				decor.EwmaETA(decor.ET_STYLE_GO, 60), "done",
+			),
+		),
+		mpb.BarRemoveOnComplete(),
+	)
+	defer func() {
+		bar.Completed()
+		bar.Abort(true)
+	}()
+	origSize := int64(0)
+	lastUpdate := time.Now()
 	for {
 		select {
-		case <-stop.Ch():
+		case <-done.Ch():
 			return
 		case <-ticker.C:
+			var err error
 			size, err := logUtils.DirSize(v.videoDir())
 			if err != nil {
 				log.Errorf("error while getting size of download directory: %s", errors.FullTrace(err))
 				continue
 			}
-			delta := size - lastSize
-			avgSpeed := delta / 10
-			if avgSpeed < 200*1024 { //200 KB/s
-				count++
-			} else {
-				count--
-			}
-			if count > 3 {
-				err := cmd.Process.Signal(syscall.SIGKILL)
-				if err != nil {
-					log.Errorf("failure in killing slow download: %s", errors.Err(err))
-					return
+			if size > origSize {
+				origSize = size
+				bar.SetCurrent(size)
+				if size > int64(videoSize+audioSize) {
+					bar.SetTotal(size+2048, false)
 				}
+				bar.DecoratorEwmaUpdate(time.Since(lastUpdate))
+				lastUpdate = time.Now()
 			}
 		}
 	}
-}
-
-func (v *YoutubeVideo) trackProgressBar(argsWithFilters []string, ticker *time.Ticker, metadata *ytMetadata, done *stop.Group, sourceAddress string) {
-	v.progressBarWg.Add(1)
-	go func() {
-		defer v.progressBarWg.Done()
-		//get size of the video before downloading
-		cmd := exec.Command("yt-dlp", append(argsWithFilters, "-s")...)
-		stdout, err := cmd.StdoutPipe()
-		if err != nil {
-			log.Errorf("error while getting final file size: %s", errors.FullTrace(err))
-			return
-		}
-
-		if err := cmd.Start(); err != nil {
-			log.Errorf("error while getting final file size: %s", errors.FullTrace(err))
-			return
-		}
-		outLog, _ := ioutil.ReadAll(stdout)
-		err = cmd.Wait()
-		output := string(outLog)
-		parts := strings.Split(output, ": ")
-		if len(parts) != 3 {
-			log.Errorf("couldn't parse audio and video parts from the output (%s)", output)
-			return
-		}
-		formats := strings.Split(parts[2], "+")
-		if len(formats) != 2 {
-			log.Errorf("couldn't parse formats from the output (%s)", output)
-			return
-		}
-		log.Debugf("'%s'", output)
-		videoFormat := formats[0]
-		audioFormat := strings.Replace(formats[1], "\n", "", -1)
-
-		videoSize := 0
-		audioSize := 0
-		if metadata != nil {
-			for _, f := range metadata.Formats {
-				if f.FormatID == videoFormat {
-					videoSize = f.Filesize
-				}
-				if f.FormatID == audioFormat {
-					audioSize = f.Filesize
-				}
-			}
-		}
-
-		log.Debugf("(%s) - videoSize: %d (%s), audiosize: %d (%s)", v.id, videoSize, videoFormat, audioSize, audioFormat)
-		bar := v.progressBars.AddBar(int64(videoSize+audioSize),
-			mpb.PrependDecorators(
-				decor.CountersKibiByte("% .2f / % .2f "),
-				// simple name decorator
-				decor.Name(fmt.Sprintf("id: %s src-ip: (%s)", v.id, sourceAddress)),
-				// decor.DSyncWidth bit enables column width synchronization
-				decor.Percentage(decor.WCSyncSpace),
-			),
-			mpb.AppendDecorators(
-				decor.EwmaETA(decor.ET_STYLE_GO, 90),
-				decor.Name(" ] "),
-				decor.EwmaSpeed(decor.UnitKiB, "% .2f ", 60),
-				decor.OnComplete(
-					// ETA decorator with ewma age of 60
-					decor.EwmaETA(decor.ET_STYLE_GO, 60), "done",
-				),
-			),
-			mpb.BarRemoveOnComplete(),
-		)
-		defer func() {
-			bar.Completed()
-			bar.Abort(true)
-		}()
-		origSize := int64(0)
-		lastUpdate := time.Now()
-		for {
-			select {
-			case <-done.Ch():
-				return
-			case <-ticker.C:
-				var err error
-				size, err := logUtils.DirSize(v.videoDir())
-				if err != nil {
-					log.Errorf("error while getting size of download directory: %s", errors.FullTrace(err))
-					return
-				}
-				if size > origSize {
-					origSize = size
-					bar.SetCurrent(size)
-					if size > int64(videoSize+audioSize) {
-						bar.SetTotal(size+2048, false)
-					}
-					bar.DecoratorEwmaUpdate(time.Since(lastUpdate))
-					lastUpdate = time.Now()
-				}
-			}
-		}
-	}()
 }
 
 type ytMetadata struct {
@@ -781,6 +748,7 @@ func (v *YoutubeVideo) Sync(daemon *jsonrpc.Client, params SyncParams, existingV
 func (v *YoutubeVideo) downloadAndPublish(daemon *jsonrpc.Client, params SyncParams) (*SyncSummary, error) {
 	var err error
 	if v.youtubeInfo == nil {
+		logUtils.SendErrorToSlack("hardcoded fix for %s - %s playlist position: %d", v.id, v.title, v.playlistPosition)
 		return nil, errors.Err("Video is not available - hardcoded fix")
 	}
 
@@ -807,7 +775,7 @@ func (v *YoutubeVideo) downloadAndPublish(daemon *jsonrpc.Client, params SyncPar
 		return nil, errors.Err("livestream is likely bugged as it was recently published and has a length of %s which is more than 2 hours", dur.String())
 	}
 	for {
-		err = v.download()
+		err = v.Xdownload()
 		if err != nil && strings.Contains(err.Error(), "HTTP Error 429") {
 			continue
 		} else if err != nil {

@@ -109,9 +109,10 @@ func GetVideosToSync(channelID string, syncedVideos map[string]sdk.SyncedVideo, 
 	}
 
 	for k, v := range syncedVideos {
-		if !v.Published && v.MetadataVersion >= newMetadataVersion {
+		if !v.Published || v.MetadataVersion >= newMetadataVersion {
 			continue
 		}
+
 		if _, ok := playlistMap[k]; !ok {
 			videos = append(videos, sources.NewMockedVideo(videoParams.VideoDir, k, channelID, videoParams.Stopper, videoParams.IPPool))
 		}
