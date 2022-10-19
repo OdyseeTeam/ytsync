@@ -271,7 +271,7 @@ func (v *YoutubeVideo) Xdownload() error {
 		)
 	}
 
-	qualityIndex := len(qualities) - 1
+	qualityIndex := 0
 	remainingAttempts := 3
 
 	for remainingAttempts > 0 {
@@ -316,9 +316,9 @@ func (v *YoutubeVideo) Xdownload() error {
 		}
 		if res.CouldRetry {
 			if res.ReduceResolution {
-				qualityIndex--
+				qualityIndex++
 				_ = v.delete(res.KnownError.Error())
-				if qualityIndex < 0 {
+				if qualityIndex >= len(qualities)-1 {
 					//return errors.Err("could not find a suitable resolution")
 					break //todo: can this ever happen?
 				}
