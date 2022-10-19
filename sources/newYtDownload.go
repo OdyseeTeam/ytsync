@@ -17,7 +17,7 @@ import (
 
 	"github.com/lbryio/lbry.go/v2/extras/errors"
 	"github.com/lbryio/lbry.go/v2/extras/stop"
-	
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -65,7 +65,7 @@ func rawDownload(args []string, dir string) (*DownloadResults, error) {
 		case ThrottledErr:
 			dr.WasThrottled = true
 			dr.CouldRetry = true
-		case FragmentsRetriesErr:
+		case FragmentsRetriesErr, FormatNotAvailableErr:
 			dr.CouldRetry = true
 			dr.ReduceResolution = true
 		}
@@ -130,11 +130,12 @@ func detectSlowDownload(path string, stop *stop.Group, cmd *exec.Cmd) {
 }
 
 var (
-	ThrottledErr        = errors.Base("throttled")
-	FragmentsRetriesErr = errors.Base("missing fragments")
-	VideoExtractionErr  = errors.Base("unable to extract")
-	VideoTooLongErr     = errors.Base("video is too long to process")
-	VideoTooBigErr      = errors.Base("the video is too big to sync, skipping for now")
+	ThrottledErr          = errors.Base("throttled")
+	FragmentsRetriesErr   = errors.Base("missing fragments")
+	VideoExtractionErr    = errors.Base("unable to extract")
+	VideoTooLongErr       = errors.Base("video is too long to process")
+	VideoTooBigErr        = errors.Base("the video is too big to sync, skipping for now")
+	FormatNotAvailableErr = errors.Base("Requested format is not available")
 )
 
 const (
@@ -144,10 +145,10 @@ const (
 	UAVideoDataExtractMsg = "YouTube said: Unable to extract video data"
 	DurationConstraintMsg = "does not pass filter (duration"
 	SizeConstraintMsg     = "File is larger than max-filesize"
+	FormatNotAvailable    = "Requested format is not available"
 )
 
 func parseFailureReason(errLog string) error {
-
 	if errLog == "" {
 		return nil
 	}
@@ -162,6 +163,9 @@ func parseFailureReason(errLog string) error {
 	}
 	if strings.Contains(errLog, UAVideoDataExtractMsg) {
 		return errors.Err(VideoExtractionErr)
+	}
+	if strings.Contains(errLog, FormatNotAvailable) {
+		return errors.Err(FormatNotAvailableErr)
 	}
 	return errors.Err(errLog)
 }
