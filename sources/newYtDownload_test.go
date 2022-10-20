@@ -50,6 +50,7 @@ func Test_rawDownload(t *testing.T) {
 	if !assert.NoError(t, res.KnownError) {
 		return
 	}
+	assert.True(t, res.Successful)
 }
 
 func TestVideoTooLong(t *testing.T) {

@@ -300,8 +300,8 @@ func (v *YoutubeVideo) Xdownload() error {
 			_ = v.delete(err.Error())
 			return err
 		}
-		successfulDownload := res.KnownError == nil
-		if successfulDownload {
+
+		if res.Successful {
 			fi, err := os.Stat(v.getFullPath())
 			if err != nil {
 				return errors.Err(err)
