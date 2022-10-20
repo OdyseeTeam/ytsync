@@ -34,10 +34,7 @@ type throttledIP struct {
 
 var ipPoolInstance *IPPool
 
-func GetIPPool(stopGrp *stop.Group) (*IPPool, error) {
-	if ipPoolInstance != nil {
-		return ipPoolInstance, nil
-	}
+func getIps() ([]throttledIP, error) {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		return nil, errors.Err(err)
@@ -58,27 +55,51 @@ func GetIPPool(stopGrp *stop.Group) (*IPPool, error) {
 			}
 		}
 	}
+	return pool, nil
+}
+
+func GetIPPool(stopGrp *stop.Group) (*IPPool, error) {
+	if ipPoolInstance != nil {
+		return ipPoolInstance, nil
+	}
+	pool, err := getIps()
+	if err != nil {
+		return nil, err
+	}
 	ipPoolInstance = &IPPool{
 		ips:     pool,
 		lock:    &sync.RWMutex{},
 		stopGrp: stopGrp,
 	}
-	//ticker := time.NewTicker(10 * time.Second)
-	//go func() {
-	//	for {
-	//		select {
-	//		case <-stopGrp.Ch():
-	//			return
-	//		case <-ticker.C:
-	//			ipPoolInstance.lock.RLock()
-	//			for _, ip := range ipPoolInstance.ips {
-	//				log.Debugf("IP: %s\tInUse: %t\tVideoID: %s\tThrottled: %t\tLastUse: %.1f", ip.IP, ip.InUse, ip.UsedForVideo, ip.Throttled, time.Since(ip.LastUse).Seconds())
-	//			}
-	//			ipPoolInstance.lock.RUnlock()
-	//		}
-	//	}
-	//}()
 	return ipPoolInstance, nil
+}
+
+func (i *IPPool) UpdateIps() error {
+	currentIPs, err := getIps()
+	if err != nil {
+		return err
+	}
+	newIPsMap := make(map[string]bool)
+	for _, ip := range currentIPs {
+		newIPsMap[ip.IP] = true
+	}
+
+	oldIpsMap := make(map[string]bool)
+	refreshedIPs := make([]throttledIP, 0)
+	for _, ip := range i.ips {
+		oldIpsMap[ip.IP] = true
+		if newIPsMap[ip.IP] {
+			refreshedIPs = append(refreshedIPs, ip)
+		}
+	}
+
+	for _, ip := range currentIPs {
+		if !oldIpsMap[ip.IP] {
+			refreshedIPs = append(refreshedIPs, ip)
+		}
+	}
+	i.ips = refreshedIPs
+	return nil
 }
 
 // AllThrottled checks whether the IPs provided are all throttled.
@@ -131,6 +152,8 @@ func (i *IPPool) ReleaseAll() {
 	}
 }
 
+//SetThrottled sets the throttled flag for the provided IP and schedules its unban for a future time
+//todo: this might introduce a leak if the ip is removed from the pool while it's throttled (this would be for the VPN interface)
 func (i *IPPool) SetThrottled(ip string) {
 	i.lock.Lock()
 	defer i.lock.Unlock()

@@ -176,6 +176,10 @@ func (s *Sync) FullCycle() (e error) {
 	if ipPool != nil {
 		ipPool.ReleaseAll()
 	}
+	err = ipPool.UpdateIps()
+	if err != nil {
+		return err
+	}
 
 	log.Printf("Starting daemon")
 	err = logUtils.StartDaemon()

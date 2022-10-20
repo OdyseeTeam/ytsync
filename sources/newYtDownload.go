@@ -61,7 +61,7 @@ func rawDownload(args []string, dir string) (*DownloadResults, error) {
 		dr := &DownloadResults{
 			KnownError: parsedFailure,
 		}
-		switch parsedFailure {
+		switch errors.Unwrap(parsedFailure) {
 		case ThrottledErr:
 			dr.WasThrottled = true
 			dr.CouldRetry = true

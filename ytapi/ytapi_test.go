@@ -7,7 +7,7 @@ import (
 )
 
 func TestChannelInfo(t *testing.T) {
-	info, err := ChannelInfo("UCNQfQvFMPnInwsU_iGYArJQ")
+	info, err := ChannelInfo("UCNQfQvFMPnInwsU_iGYArJQ", 0)
 	assert.NoError(t, err)
 	assert.NotNil(t, info)
 }
