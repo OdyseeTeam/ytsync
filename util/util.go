@@ -327,6 +327,7 @@ func StartDaemon() error {
 }
 
 func StopDaemon() error {
+	log.Println("Stopping daemon")
 	start := time.Now()
 	defer func(start time.Time) {
 		timing.TimedComponent("stopDaemon").Add(time.Since(start))
@@ -352,7 +353,6 @@ func startDaemonViaDocker() error {
 	if err != nil {
 		return errors.Err(err)
 	}
-
 	return nil
 }
 

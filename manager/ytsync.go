@@ -56,8 +56,17 @@ type Sync struct {
 	defaultAccountID string
 	hardVideoFailure hardVideoFailure
 
+	state         runState
 	progressBarWg *sync.WaitGroup
 	progressBar   *mpb.Progress
+}
+
+type runState struct {
+	blockchainDbDownloaded bool
+	walletDownloaded       bool
+	lbrynetStarted         bool
+	vpnStarted             bool
+	newWalletCreated       bool
 }
 
 type hardVideoFailure struct {
@@ -139,20 +148,20 @@ func (s *Sync) FullCycle() (e error) {
 	}
 
 	defer s.setChannelTerminationStatus(&e)
+	defer s.performShutdownTasks(&e)
 	err = s.downloadWallet()
 	if err != nil && err.Error() != "wallet not on S3" {
 		return errors.Prefix("failure in downloading wallet", err)
 	} else if err == nil {
 		log.Println("Continuing previous upload")
 	} else {
+		s.state.newWalletCreated = true
 		log.Println("Starting new wallet")
 	}
 	err = s.downloadBlockchainDB()
 	if err != nil {
 		return errors.Prefix("failure in downloading blockchain.db", err)
 	}
-
-	defer s.stopAndUploadWallet(&e)
 
 	s.videoDirectory, err = ioutil.TempDir(os.Getenv("TMP_DIR"), "ytsync")
 	if err != nil {
@@ -169,6 +178,7 @@ func (s *Sync) FullCycle() (e error) {
 		if err != nil {
 			return err
 		}
+		s.state.vpnStarted = true
 	}
 
 	//TODO: THIS IS A TEMPORARY WORK AROUND FOR THE STUPID IP LOCKUP BUG
@@ -342,6 +352,7 @@ func (s *Sync) waitForDaemonStart() error {
 		default:
 			status, err := s.daemon.Status()
 			if err == nil && status.StartupStatus.Wallet && status.IsRunning {
+				s.state.lbrynetStarted = true
 				return nil
 			}
 			if time.Since(beginTime).Minutes() > 120 {
@@ -353,7 +364,7 @@ func (s *Sync) waitForDaemonStart() error {
 	}
 }
 
-func (s *Sync) stopAndUploadWallet(e *error) {
+func (s *Sync) performShutdownTasks(e *error) {
 	if configs.Configuration.UseVpn {
 		log.Println("Stopping vpn...")
 		err := logUtils.StopVpn()
@@ -366,37 +377,46 @@ func (s *Sync) stopAndUploadWallet(e *error) {
 		}
 		log.Println("Vpn stopped")
 	}
-	log.Println("Stopping daemon")
-	shutdownErr := logUtils.StopDaemon()
-	if shutdownErr != nil {
-		logShutdownError(shutdownErr)
-	} else {
-		// the cli will return long before the daemon effectively stops. we must observe the processes running
-		// before moving the wallet
-		waitTimeout := 8 * time.Minute
-		processDeathError := waitForDaemonProcess(waitTimeout)
-		if processDeathError != nil {
-			logShutdownError(processDeathError)
+
+	successfulDaemonStop := false
+	if s.state.lbrynetStarted {
+		shutdownErr := logUtils.StopDaemon()
+		if shutdownErr != nil {
+			logShutdownError(shutdownErr)
 		} else {
-			err := s.uploadWallet()
-			if err != nil {
-				if *e == nil {
-					*e = err
-				} else {
-					*e = errors.Prefix(fmt.Sprintf("%s + original error", errors.FullTrace(err)), *e)
-				}
+			// the cli will return long before the daemon effectively stops. we must observe the processes running
+			// before moving the wallet
+			waitTimeout := 8 * time.Minute
+			processDeathError := waitForDaemonProcess(waitTimeout)
+			if processDeathError != nil {
+				logShutdownError(processDeathError)
+			} else {
+				successfulDaemonStop = true
 			}
-			err = s.uploadBlockchainDB()
-			if err != nil {
-				if *e == nil {
-					*e = err
-				} else {
-					*e = errors.Prefix(fmt.Sprintf("failure uploading blockchain DB: %s + original error", errors.FullTrace(err)), *e)
-				}
+		}
+	}
+	if s.state.walletDownloaded || s.state.newWalletCreated {
+		err := s.uploadWallet()
+		if err != nil {
+			if *e == nil {
+				*e = err
+			} else {
+				*e = errors.Prefix(fmt.Sprintf("%s + original error", errors.FullTrace(err)), *e)
+			}
+		}
+	}
+	if successfulDaemonStop {
+		err := s.uploadBlockchainDB()
+		if err != nil {
+			if *e == nil {
+				*e = err
+			} else {
+				*e = errors.Prefix(fmt.Sprintf("failure uploading blockchain DB: %s + original error", errors.FullTrace(err)), *e)
 			}
 		}
 	}
 }
+
 func logShutdownError(shutdownErr error) {
 	logUtils.SendErrorToSlack("error shutting down daemon: %s", errors.FullTrace(shutdownErr))
 	logUtils.SendErrorToSlack("WALLET HAS NOT BEEN MOVED TO THE WALLET BACKUP DIR")

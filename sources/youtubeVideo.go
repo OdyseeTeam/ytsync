@@ -654,11 +654,11 @@ func (v *YoutubeVideo) delete(reason string) error {
 }
 
 func (v *YoutubeVideo) triggerThumbnailSave() (err error) {
-	thumbnail := thumbs.GetBestThumbnail(v.youtubeInfo.Thumbnails)
-	if thumbnail.Width == 0 {
-		return errors.Err("default youtube thumbnail found")
-	}
-	v.thumbnailURL, err = thumbs.MirrorThumbnail(thumbnail.URL, v.ID())
+	//thumbnail := thumbs.GetBestThumbnail(v.youtubeInfo.Thumbnails)
+	//if thumbnail.Width == 0 {
+	//	return errors.Err("default youtube thumbnail found")
+	//}
+	v.thumbnailURL, err = thumbs.MirrorThumbnail(v.youtubeInfo.GetThumbnailUrl(), v.ID())
 	return err
 }
 
@@ -865,8 +865,7 @@ func (v *YoutubeVideo) reprocess(daemon *jsonrpc.Client, params SyncParams, exis
 		if v.mocked {
 			return nil, errors.Err("could not find thumbnail for mocked video")
 		}
-		thumbnail := thumbs.GetBestThumbnail(v.youtubeInfo.Thumbnails)
-		thumbnailURL, err = thumbs.MirrorThumbnail(thumbnail.URL, v.ID())
+		thumbnailURL, err = thumbs.MirrorThumbnail(v.youtubeInfo.GetThumbnailUrl(), v.ID())
 	} else {
 		thumbnailURL = thumbs.ThumbnailEndpoint + v.ID()
 	}

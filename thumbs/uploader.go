@@ -1,6 +1,9 @@
 package thumbs
 
 import (
+	"bytes"
+	"crypto/md5"
+	"encoding/hex"
 	"io"
 	"net/http"
 	"os"
@@ -26,6 +29,7 @@ type thumbnailUploader struct {
 
 const thumbnailPath = "/tmp/ytsync_thumbnails/"
 const ThumbnailEndpoint = "https://thumbnails.lbry.com/"
+const EmptyThumbnailHash = "e2ddfee11ae7edcae257da47f3a78a70"
 
 func (u *thumbnailUploader) downloadThumbnail() error {
 	_ = os.Mkdir(thumbnailPath, 0777)
@@ -43,11 +47,31 @@ func (u *thumbnailUploader) downloadThumbnail() error {
 	}
 	defer resp.Body.Close()
 
-	_, err = io.Copy(img, resp.Body)
+	reader, thumbnailHash, err := getMD5(resp.Body)
+	if err != nil {
+		return errors.Err(err)
+	}
+	if thumbnailHash == EmptyThumbnailHash {
+		return errors.Err("youtube thumbnail is empty - too soon?")
+	}
+	_, err = io.Copy(img, reader)
 	if err != nil {
 		return errors.Err(err)
 	}
 	return nil
+}
+
+func getMD5(body io.Reader) (io.Reader, string, error) {
+	var b bytes.Buffer
+
+	hash := md5.New()
+	_, err := io.Copy(&b, io.TeeReader(body, hash))
+
+	if err != nil {
+		return nil, "", errors.Err(err)
+	}
+
+	return &b, hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 func (u *thumbnailUploader) uploadThumbnail() error {
@@ -115,7 +139,11 @@ func MirrorThumbnail(url string, name string) (string, error) {
 	return tu.mirroredUrl, nil
 }
 
+// GetBestThumbnail returns the thumbnail URL for a given video ID
+// youtube keeps changing how their thumbnails are listed
+// as of october 2022 this method seems to be always returning a valid thumbnail
 func GetBestThumbnail(thumbnails []ytdl.Thumbnail) *ytdl.Thumbnail {
+
 	var bestWidth ytdl.Thumbnail
 	for _, thumbnail := range thumbnails {
 		if bestWidth.Width < thumbnail.Width {

@@ -80,7 +80,7 @@ func (s *Sync) downloadWallet() error {
 	if err != nil {
 		return errors.Prefix("error replacing temp wallet for default wallet", err)
 	}
-
+	s.state.walletDownloaded = true
 	return nil
 }
 
@@ -114,6 +114,12 @@ func (s *Sync) downloadBlockchainDB() error {
 		return errors.Prefix("error creating temp blockchain DB file", err)
 	}
 	defer out.Close()
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+			log.Errorf("error removing temp blockchain DB file: %v", err)
+		}
+	}(defaultTempBDBPath)
 
 	bytesWritten, err := downloader.Download(out, &s3.GetObjectInput{
 		Bucket: aws.String(configs.Configuration.BlockchaindbS3Config.Bucket),
@@ -144,11 +150,9 @@ func (s *Sync) downloadBlockchainDB() error {
 	if err != nil {
 		return errors.Prefix("error extracting blockchain.db files", err)
 	}
-	err = os.Remove(defaultTempBDBPath)
-	if err != nil {
-		return errors.Err(err)
-	}
+
 	log.Printf("blockchain.db data downloaded and extracted to %s", blockchainDbDir)
+	s.state.blockchainDbDownloaded = true
 	return nil
 }
 

@@ -1,6 +1,7 @@
 package ytdl
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/lbryio/ytsync/v5/sdk"
@@ -87,6 +88,11 @@ type Thumbnail struct {
 	Height     int    `json:"height,omitempty"`
 	Width      int    `json:"width,omitempty"`
 	Resolution string `json:"resolution,omitempty"`
+}
+
+//GetThumbnailUrl returns the url of the thumbnail to the video
+func (v *YtdlVideo) GetThumbnailUrl() string {
+	return fmt.Sprintf("https://i.ytimg.com/vi/%s/hqdefault.jpg", v.ID)
 }
 
 func (v *YtdlVideo) GetUploadTime() time.Time {

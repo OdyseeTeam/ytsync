@@ -272,7 +272,9 @@ func (v *YoutubeVideo) Xdownload() error {
 	}
 
 	qualityIndex := 0
-	remainingAttempts := 3
+	var lastKnownError error
+
+	remainingAttempts := len(qualities)
 
 	for remainingAttempts > 0 {
 		remainingAttempts--
@@ -300,7 +302,7 @@ func (v *YoutubeVideo) Xdownload() error {
 			_ = v.delete(err.Error())
 			return err
 		}
-
+		lastKnownError = res.KnownError
 		if res.Successful {
 			fi, err := os.Stat(v.getFullPath())
 			if err != nil {
@@ -338,7 +340,7 @@ func (v *YoutubeVideo) Xdownload() error {
 		_ = v.delete(res.KnownError.Error())
 		return res.KnownError
 	}
-	return nil
+	return lastKnownError
 }
 
 func (v *YoutubeVideo) getSourceAddress() (string, error) {

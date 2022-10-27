@@ -170,4 +170,5 @@ func TestNoFormat(t *testing.T) {
 	assert.True(t, errors.Is(res.KnownError, FormatNotAvailableErr))
 	assert.True(t, res.CouldRetry)
 	assert.True(t, res.ReduceResolution)
+	assert.False(t, res.Successful)
 }
