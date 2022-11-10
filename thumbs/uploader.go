@@ -143,7 +143,6 @@ func MirrorThumbnail(url string, name string) (string, error) {
 // youtube keeps changing how their thumbnails are listed
 // as of october 2022 this method seems to be always returning a valid thumbnail
 func GetBestThumbnail(thumbnails []ytdl.Thumbnail) *ytdl.Thumbnail {
-
 	var bestWidth ytdl.Thumbnail
 	for _, thumbnail := range thumbnails {
 		if bestWidth.Width < thumbnail.Width {
