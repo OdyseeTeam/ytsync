@@ -12,9 +12,14 @@ import (
 )
 
 func TestGetPlaylistVideoIDs(t *testing.T) {
-	videoIDs, err := GetPlaylistVideoIDs("UCJ0-OtVpF0wOKEqT2Z1HEtA", 50, nil, nil)
-	if err != nil {
-		logrus.Error(err)
+	stopGrp := stop.New()
+	ip, err := ip_manager.GetIPPool(stopGrp)
+	if !assert.NoError(t, err) {
+		return
+	}
+	videoIDs, err := GetPlaylistVideoIDs("UCJ0-OtVpF0wOKEqT2Z1HEtA", 50, stopGrp.Ch(), ip)
+	if !assert.NoError(t, err) {
+		return
 	}
 	for _, id := range videoIDs {
 		println(id)

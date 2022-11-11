@@ -23,20 +23,23 @@ import (
 )
 
 func GetPlaylistVideoIDs(channelName string, maxVideos int, stopChan stop.Chan, pool *ip_manager.IPPool) ([]string, error) {
-	args := []string{"--skip-download", "https://www.youtube.com/channel/" + channelName + "/videos", "--get-id", "--flat-playlist", "--cookies", "cookies.txt", "--playlist-end", fmt.Sprintf("%d", maxVideos)}
-	ids, err := run(channelName, args, stopChan, pool)
-	if err != nil {
-		return nil, errors.Err(err)
-	}
-	videoIDs := make([]string, 0, maxVideos)
-	for i, v := range ids {
-		if v == "" {
-			continue
+	tabs := []string{"videos", "shorts", "streams"}
+	var videoIDs []string
+	for _, tab := range tabs {
+		args := []string{"--skip-download", "https://www.youtube.com/channel/" + channelName + "/" + tab, "--get-id", "--flat-playlist", "--cookies", "cookies.txt", "--playlist-end", fmt.Sprintf("%d", maxVideos)}
+		ids, err := run(channelName, args, stopChan, pool)
+		if err != nil {
+			return nil, errors.Err(err)
 		}
-		if i >= maxVideos {
-			break
+		for i, v := range ids {
+			if v == "" {
+				continue
+			}
+			if i >= maxVideos {
+				break
+			}
+			videoIDs = append(videoIDs, v)
 		}
-		videoIDs = append(videoIDs, v)
 	}
 	return videoIDs, nil
 }
