@@ -29,6 +29,9 @@ func GetPlaylistVideoIDs(channelName string, maxVideos int, stopChan stop.Chan, 
 		args := []string{"--skip-download", "https://www.youtube.com/channel/" + channelName + "/" + tab, "--get-id", "--flat-playlist", "--cookies", "cookies.txt", "--playlist-end", fmt.Sprintf("%d", maxVideos)}
 		ids, err := run(channelName, args, stopChan, pool)
 		if err != nil {
+			if strings.Contains(err.Error(), "This channel does not have a") {
+				continue
+			}
 			return nil, errors.Err(err)
 		}
 		for i, v := range ids {
