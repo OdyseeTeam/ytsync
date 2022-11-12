@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-var claimNameRegexp = regexp.MustCompile(`[=&#:$@%？?;、\\"/<>%{}|｜^~\x60[\]\s]`)
+var claimNameRegexp = regexp.MustCompile(`[=&#:$@*%？?;、\\"/<>%{}|｜^~\x60[\]\s]`)
 
 type Namer struct {
 	mu    *sync.Mutex

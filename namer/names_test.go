@@ -25,4 +25,8 @@ func Test_getClaimNameFromTitle(t *testing.T) {
 	assert.Equal(t, "精靈樂章-這樣的夥伴沒問題嗎-2", name)
 	name = getClaimNameFromTitle("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", 50)
 	assert.Equal(t, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-50", name)
+	name = getClaimNameFromTitle("wtf*aaa", 0)
+	assert.Equal(t, "wtf-aaa", name)
+	name = getClaimNameFromTitle("wtf-*aaa", 0)
+	assert.Equal(t, "wtf-aaa", name)
 }
