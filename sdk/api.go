@@ -66,13 +66,14 @@ func (a *APIConfig) FetchChannels(status string, cliFlags *shared.SyncFlags) ([]
 	}
 	endpoint := a.ApiURL + "/yt/jobs"
 	res, err := a.client.PostForm(endpoint, url.Values{
-		"auth_token":  {a.ApiToken},
-		"sync_status": {status},
-		"min_videos":  {strconv.Itoa(1)},
-		"after":       {strconv.Itoa(int(cliFlags.SyncFrom))},
-		"before":      {strconv.Itoa(int(cliFlags.SyncUntil))},
-		"sync_server": {a.HostName},
-		"channel_id":  {cliFlags.ChannelID},
+		"auth_token":              {a.ApiToken},
+		"sync_status":             {status},
+		"min_videos":              {strconv.Itoa(1)},
+		"after":                   {strconv.Itoa(int(cliFlags.SyncFrom))},
+		"before":                  {strconv.Itoa(int(cliFlags.SyncUntil))},
+		"sync_server":             {a.HostName},
+		"channel_id":              {cliFlags.ChannelID},
+		"with_deleted_on_youtube": {fmt.Sprintf("%t", cliFlags.WithDeletedOnYoutube)},
 	})
 	if err != nil {
 		util.SendErrorToSlack("error while trying to call %s. Waiting to retry: %s", endpoint, err.Error())

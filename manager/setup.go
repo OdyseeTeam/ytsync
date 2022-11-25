@@ -49,6 +49,7 @@ func (s *Sync) enableAddressReuse() error {
 	}
 	return nil
 }
+
 func (s *Sync) walletSetup() error {
 	start := time.Now()
 	defer func(start time.Time) {
@@ -403,6 +404,10 @@ func (s *Sync) ensureChannelOwnership() error {
 		if !channelUsesOldMetadata {
 			return nil
 		}
+	}
+
+	if s.DbChannelData.IsDeletedOnYoutube {
+		return nil
 	}
 
 	balanceResp, err := s.daemon.AccountBalance(nil)

@@ -787,7 +787,7 @@ func (s *Sync) doSync() error {
 
 	if s.DbChannelData.DesiredChannelName == "@UCBerkeley" {
 		err = errors.Err("UCB is not supported in this version of YTSYNC")
-	} else {
+	} else if !s.DbChannelData.IsDeletedOnYoutube {
 		err = s.enqueueYoutubeVideos()
 	}
 	close(s.queue)

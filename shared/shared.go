@@ -27,6 +27,7 @@ type YoutubeChannel struct {
 	LastUploadedVideo  string         `json:"last_uploaded_video"`
 	WipeDB             bool           `json:"wipe_db"`
 	Language           string         `json:"language"`
+	IsDeletedOnYoutube bool           `json:"is_deleted_on_youtube"`
 }
 
 type PublishAddress struct {
@@ -138,6 +139,7 @@ type SyncFlags struct {
 	Status                  string
 	SecondaryStatus         string
 	ChannelID               string
+	WithDeletedOnYoutube    bool
 	SyncFrom                int64
 	SyncUntil               int64
 	ConcurrentJobs          int
