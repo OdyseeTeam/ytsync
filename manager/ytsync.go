@@ -342,6 +342,7 @@ func (s *Sync) setChannelTerminationStatus(e *error) {
 
 func (s *Sync) waitForDaemonStart() error {
 	beginTime := time.Now()
+	hasHotRestarted := false
 	defer func(start time.Time) {
 		timing.TimedComponent("waitForDaemonStart").Add(time.Since(start))
 	}(beginTime)
@@ -355,7 +356,14 @@ func (s *Sync) waitForDaemonStart() error {
 				s.state.lbrynetStarted = true
 				return nil
 			}
-			if time.Since(beginTime).Minutes() > 120 {
+			if !hasHotRestarted && time.Since(beginTime) > 2*time.Minute {
+				hasHotRestarted = true
+				err = logUtils.RestartDaemon()
+				if err != nil {
+					return err
+				}
+			}
+			if time.Since(beginTime) > 2*time.Hour {
 				s.grp.Stop()
 				return errors.Err("the daemon is taking too long to start. Something is wrong")
 			}

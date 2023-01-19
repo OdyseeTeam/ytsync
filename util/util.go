@@ -326,6 +326,17 @@ func StartDaemon() error {
 	return startDaemonViaSystemd()
 }
 
+func RestartDaemon() error {
+	start := time.Now()
+	defer func(start time.Time) {
+		timing.TimedComponent("startDaemon").Add(time.Since(start))
+	}(start)
+	if IsUsingDocker() {
+		return restartDaemonViaDocker()
+	}
+	return restartDaemonViaSystemd()
+}
+
 func StopDaemon() error {
 	log.Println("Stopping daemon")
 	start := time.Now()
@@ -356,6 +367,24 @@ func startDaemonViaDocker() error {
 	return nil
 }
 
+func restartDaemonViaDocker() error {
+	container, err := GetLBRYNetContainer(true)
+	if err != nil {
+		return err
+	}
+
+	cli, err := client.NewEnvClient()
+	if err != nil {
+		panic(err)
+	}
+
+	err = cli.ContainerRestart(context.Background(), container.ID, nil)
+	if err != nil {
+		return errors.Err(err)
+	}
+	return nil
+}
+
 func stopDaemonViaDocker() error {
 	container, err := GetLBRYNetContainer(ONLINE)
 	if err != nil {
@@ -377,6 +406,14 @@ func stopDaemonViaDocker() error {
 
 func startDaemonViaSystemd() error {
 	err := exec.Command("/usr/bin/sudo", "/bin/systemctl", "start", "lbrynet.service").Run()
+	if err != nil {
+		return errors.Err(err)
+	}
+	return nil
+}
+
+func restartDaemonViaSystemd() error {
+	err := exec.Command("/usr/bin/sudo", "/bin/systemctl", "restart", "lbrynet.service").Run()
 	if err != nil {
 		return errors.Err(err)
 	}
