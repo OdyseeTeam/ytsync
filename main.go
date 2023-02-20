@@ -15,6 +15,7 @@ import (
 	"github.com/lbryio/lbry.go/v2/extras/errors"
 	"github.com/lbryio/lbry.go/v2/extras/util"
 
+	"github.com/google/gops/agent"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -40,6 +41,9 @@ func main() {
 	go func() {
 		log.Error(http.ListenAndServe(":2112", nil))
 	}()
+	if err := agent.Listen(agent.Options{}); err != nil {
+		log.Fatal(err)
+	}
 	cmd := &cobra.Command{
 		Use:   "ytsync",
 		Short: "Publish youtube channels into LBRY network automatically.",

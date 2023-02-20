@@ -13,8 +13,9 @@ replace github.com/lbryio/lbry.go/v2 => github.com/OdyseeTeam/lbry.go/v2 v2.7.2-
 require (
 	github.com/abadojack/whatlanggo v1.0.1
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
-	github.com/aws/aws-sdk-go v1.44.6
+	github.com/aws/aws-sdk-go v1.44.204
 	github.com/docker/docker v20.10.17+incompatible
+	github.com/google/gops v0.3.22
 	github.com/lbryio/lbry.go/v2 v2.7.2-0.20220815204100-2adb8af5b68c
 	github.com/lbryio/reflector.go v1.1.3-0.20220730181028-f5d30b1a6e79
 	github.com/mitchellh/go-ps v1.0.0
@@ -134,15 +135,14 @@ require (
 	github.com/volatiletech/sqlboiler v3.4.0+incompatible // indirect
 	github.com/ybbus/jsonrpc v2.1.2+incompatible // indirect
 	go.uber.org/atomic v1.9.0 // indirect
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
-	golang.org/x/mod v0.4.2 // indirect
-	golang.org/x/net v0.0.0-20220624214902-1bab6f366d9e // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
-	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519 // indirect
+	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
+	golang.org/x/net v0.1.0 // indirect
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
+	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
-	golang.org/x/tools v0.1.5 // indirect
-	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
+	golang.org/x/tools v0.1.12 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/ini.v1 v1.60.2 // indirect
