@@ -252,7 +252,9 @@ func (s *Sync) uploadBlockchainDB() error {
 	}
 
 	if _, err := os.Stat(defaultBDBDir); os.IsNotExist(err) {
-		return errors.Err("blockchain.db does not exist")
+		//return errors.Err("blockchain.db does not exist")
+		//
+		return nil
 	}
 	files, err := filepath.Glob(defaultBDBDir + "*")
 	if err != nil {
