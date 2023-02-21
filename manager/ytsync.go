@@ -64,7 +64,6 @@ type Sync struct {
 type runState struct {
 	blockchainDbDownloaded bool
 	walletDownloaded       bool
-	lbrynetStarted         bool
 	vpnStarted             bool
 	newWalletCreated       bool
 }
@@ -353,7 +352,6 @@ func (s *Sync) waitForDaemonStart() error {
 		default:
 			status, err := s.daemon.Status()
 			if err == nil && status.StartupStatus.Wallet && status.IsRunning {
-				s.state.lbrynetStarted = true
 				return nil
 			}
 			if !hasHotRestarted && time.Since(beginTime) > 2*time.Minute {
@@ -387,22 +385,20 @@ func (s *Sync) performShutdownTasks(e *error) {
 	}
 
 	successfulDaemonStop := false
-	if s.state.lbrynetStarted {
-		shutdownErr := logUtils.StopDaemon()
-		if shutdownErr != nil {
-			logShutdownError(shutdownErr)
-		}
-		// the cli will return long before the daemon effectively stops. we must observe the processes running
-		// before moving the wallet
-		waitTimeout := 8 * time.Minute
-		processDeathError := waitForDaemonProcess(waitTimeout)
-		if processDeathError != nil {
-			logShutdownError(processDeathError)
-		} else {
-			successfulDaemonStop = true
-		}
-
+	shutdownErr := logUtils.StopDaemon()
+	if shutdownErr != nil {
+		logShutdownError(shutdownErr)
 	}
+	// the cli will return long before the daemon effectively stops. we must observe the processes running
+	// before moving the wallet
+	waitTimeout := 8 * time.Minute
+	processDeathError := waitForDaemonProcess(waitTimeout)
+	if processDeathError != nil {
+		logShutdownError(processDeathError)
+	} else {
+		successfulDaemonStop = true
+	}
+
 	if (s.state.walletDownloaded || s.state.newWalletCreated) && successfulDaemonStop {
 		err := s.uploadWallet()
 		if err != nil {

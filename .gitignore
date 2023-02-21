@@ -8,3 +8,5 @@ ytsync_docker
 e2e/config.json
 
 e2e/cookies.txt
+
+downloader/cookies.txt
