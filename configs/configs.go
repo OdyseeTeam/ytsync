@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"context"
 	"net"
 	"net/http"
 	"os"
@@ -50,13 +51,18 @@ func Init(configPath string) error {
 	return nil
 }
 
+func dialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+	return dialer.DialContext(ctx, network, address)
+}
+
 func (s *S3Configs) GetS3AWSConfig() *aws.Config {
 	c := &http.Client{
 		Transport: &http.Transport{
-			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).DialContext,
+			DialContext:           dialContext,
 			TLSHandshakeTimeout:   10 * time.Second,
 			ResponseHeaderTimeout: 10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
@@ -67,11 +73,10 @@ func (s *S3Configs) GetS3AWSConfig() *aws.Config {
 		Region:           &s.Region,
 		Endpoint:         &s.Endpoint,
 		S3ForcePathStyle: aws.Bool(true),
-		//Logger:           aws.NewDefaultLogger(),
-		//LogLevel:         aws.LogLevel(aws.LogDebug),
-		HTTPClient: c,
+		HTTPClient:       c,
 	}
 }
+
 func (c *Configs) GetHostname() string {
 	var hostname string
 

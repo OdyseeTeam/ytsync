@@ -2,6 +2,7 @@ package manager
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"syscall"
@@ -158,7 +159,16 @@ func (s *SyncManager) Start() error {
 			if !shouldNotCount {
 				syncCount++
 			}
-			if sync.IsInterrupted() || (s.CliFlags.Limit != 0 && syncCount >= s.CliFlags.Limit) {
+
+			updateAvailable := false
+			if _, err := os.Stat(".update"); err == nil {
+				if err := os.Remove(".update"); err != nil {
+					log.Errorf("something went wrong while trying to remove the .update file: %s", errors.FullTrace(err))
+				}
+				updateAvailable = true
+			}
+
+			if updateAvailable || sync.IsInterrupted() || (s.CliFlags.Limit != 0 && syncCount >= s.CliFlags.Limit) {
 				shouldInterruptLoop = true
 				break
 			}

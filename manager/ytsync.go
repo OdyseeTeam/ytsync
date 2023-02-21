@@ -391,19 +391,19 @@ func (s *Sync) performShutdownTasks(e *error) {
 		shutdownErr := logUtils.StopDaemon()
 		if shutdownErr != nil {
 			logShutdownError(shutdownErr)
-		} else {
-			// the cli will return long before the daemon effectively stops. we must observe the processes running
-			// before moving the wallet
-			waitTimeout := 8 * time.Minute
-			processDeathError := waitForDaemonProcess(waitTimeout)
-			if processDeathError != nil {
-				logShutdownError(processDeathError)
-			} else {
-				successfulDaemonStop = true
-			}
 		}
+		// the cli will return long before the daemon effectively stops. we must observe the processes running
+		// before moving the wallet
+		waitTimeout := 8 * time.Minute
+		processDeathError := waitForDaemonProcess(waitTimeout)
+		if processDeathError != nil {
+			logShutdownError(processDeathError)
+		} else {
+			successfulDaemonStop = true
+		}
+
 	}
-	if s.state.walletDownloaded || s.state.newWalletCreated {
+	if (s.state.walletDownloaded || s.state.newWalletCreated) && successfulDaemonStop {
 		err := s.uploadWallet()
 		if err != nil {
 			if *e == nil {

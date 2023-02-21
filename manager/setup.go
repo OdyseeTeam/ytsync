@@ -278,6 +278,9 @@ func (s *Sync) ensureEnoughUTXOs() error {
 			return nil
 		}
 		availableBalance, _ := balance.Available.Float64()
+		if availableBalance < 0.1 {
+			return errors.Err("not enough balance to split UTXOs")
+		}
 		log.Infof("Splitting balance of %.3f evenly between %d UTXOs", availableBalance, desiredUTXOCount)
 
 		broadcastFee := 0.1
