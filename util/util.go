@@ -183,6 +183,15 @@ func StartVpn() error {
 	return nil
 }
 
+func RestartVpn() error {
+	err := exec.Command("/usr/bin/sudo", "/bin/systemctl", "restart", "vpn.service").Run()
+	if err != nil {
+		return errors.Err(err)
+	}
+	time.Sleep(10 * time.Second) //to avoid interface issues
+	return nil
+}
+
 func CleanForStartup() error {
 	if !IsRegTest() {
 		return errors.Err("never cleanup wallet outside of regtest and with caution. this should only be done in local testing and requires regtest to be on")

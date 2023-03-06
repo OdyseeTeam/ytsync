@@ -22,6 +22,7 @@ import (
 	"github.com/lbryio/ytsync/v5/timing"
 	logUtils "github.com/lbryio/ytsync/v5/util"
 	"github.com/lbryio/ytsync/v5/ytapi"
+	probing "github.com/prometheus-community/pro-bing"
 	"github.com/vbauerster/mpb/v7"
 
 	"github.com/lbryio/lbry.go/v2/extras/errors"
@@ -121,6 +122,56 @@ func (s *Sync) setStatusSyncing() error {
 }
 
 var stopGroup = stop.New()
+var running = false
+
+func (s *Sync) CheckVpn() {
+	if running {
+		return
+	}
+	running = true
+	consecutiveFailures := 0
+	for {
+		select {
+		case <-s.grp.Ch():
+			return
+		default:
+			if !s.state.vpnStarted {
+				time.Sleep(30 * time.Second)
+				continue
+			}
+			//ping 8.8.8.8
+			pinger, err := probing.NewPinger("8.8.8.8")
+			if err != nil {
+				panic(err)
+			}
+			pinger.Count = 1
+			pinger.Timeout = 5 * time.Second
+			pinger.OnFinish = func(stats *probing.Statistics) {
+				if stats.PacketsSent != stats.PacketsRecv || stats.PacketsSent == 0 {
+					consecutiveFailures++
+					log.Warnf("VPN appears to be down (consecutive failures: %d)", consecutiveFailures)
+					if consecutiveFailures > 2 {
+						//restart VPN
+						log.Infof("Restarting VPN")
+						err = logUtils.RestartVpn()
+						if err != nil {
+							log.Errorf("failed to restart vpn: %s", err.Error())
+						}
+					}
+				} else {
+					log.Infof("VPN appears to be up")
+					consecutiveFailures = 0
+				}
+				time.Sleep(60 * time.Second)
+			}
+			err = pinger.Run()
+			if err != nil {
+				log.Errorf("failed to ping: %s", err.Error())
+				continue
+			}
+		}
+	}
+}
 
 func (s *Sync) FullCycle() (e error) {
 	if os.Getenv("HOME") == "" {
@@ -178,6 +229,7 @@ func (s *Sync) FullCycle() (e error) {
 			return err
 		}
 		s.state.vpnStarted = true
+		go s.CheckVpn()
 	}
 
 	//TODO: THIS IS A TEMPORARY WORK AROUND FOR THE STUPID IP LOCKUP BUG
