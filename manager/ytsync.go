@@ -433,6 +433,7 @@ func (s *Sync) performShutdownTasks(e *error) {
 				*e = errors.Prefix(fmt.Sprintf("%s + original error", errors.FullTrace(err)), *e)
 			}
 		}
+		s.state.vpnStarted = false
 		log.Println("Vpn stopped")
 	}
 
