@@ -61,6 +61,15 @@ func (s *SyncManager) Start() error {
 	var secondLastChannelProcessed string
 	syncCount := 0
 	for {
+		manualSuspension := false
+		if _, err := os.Stat(".freeze"); err == nil {
+			manualSuspension = true
+		}
+		if manualSuspension {
+			log.Info("Manual suspension detected. Waiting 2 minutes before checking again.")
+			time.Sleep(2 * time.Minute)
+			continue
+		}
 		s.channelsToSync = make([]Sync, 0, 10) // reset sync queue
 		err := s.checkUsedSpace()
 		if err != nil {
@@ -166,6 +175,10 @@ func (s *SyncManager) Start() error {
 					log.Errorf("something went wrong while trying to remove the .update file: %s", errors.FullTrace(err))
 				}
 				updateAvailable = true
+			}
+
+			if _, err := os.Stat(".freeze"); err == nil {
+				break
 			}
 
 			if updateAvailable || sync.IsInterrupted() || (s.CliFlags.Limit != 0 && syncCount >= s.CliFlags.Limit) {

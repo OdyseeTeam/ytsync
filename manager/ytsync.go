@@ -229,7 +229,7 @@ func (s *Sync) FullCycle() (e error) {
 			return err
 		}
 		s.state.vpnStarted = true
-		go s.CheckVpn()
+		//go s.CheckVpn()
 	}
 
 	//TODO: THIS IS A TEMPORARY WORK AROUND FOR THE STUPID IP LOCKUP BUG
