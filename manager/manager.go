@@ -120,18 +120,25 @@ func (s *SyncManager) Start() error {
 			log.Infoln("No channels to sync. Pausing 5 minutes!")
 			time.Sleep(5 * time.Minute)
 		}
-		for _, sync := range s.channelsToSync {
-			if lastChannelProcessed == sync.DbChannelData.ChannelId && secondLastChannelProcessed == lastChannelProcessed {
-				util.SendToSlack("We just killed a sync for %s to stop looping! (%s)", sync.DbChannelData.DesiredChannelName, sync.DbChannelData.ChannelId)
-				stopTheLoops := errors.Err("Found channel %s running 3 times, set it to failed, and reprocess later", sync.DbChannelData.DesiredChannelName)
-				sync.setChannelTerminationStatus(&stopTheLoops)
+		for _, chanToSync := range s.channelsToSync {
+			if _, err := os.Stat(".update"); err == nil {
+				if err := os.Remove(".update"); err != nil {
+					log.Errorf("something went wrong while trying to remove the .update file: %s", errors.FullTrace(err))
+				}
+				shouldInterruptLoop = true
+				break
+			}
+			if lastChannelProcessed == chanToSync.DbChannelData.ChannelId && secondLastChannelProcessed == lastChannelProcessed {
+				util.SendToSlack("We just killed a sync for %s to stop looping! (%s)", chanToSync.DbChannelData.DesiredChannelName, chanToSync.DbChannelData.ChannelId)
+				stopTheLoops := errors.Err("Found channel %s running 3 times, set it to failed, and reprocess later", chanToSync.DbChannelData.DesiredChannelName)
+				chanToSync.setChannelTerminationStatus(&stopTheLoops)
 				continue
 			}
 			secondLastChannelProcessed = lastChannelProcessed
-			lastChannelProcessed = sync.DbChannelData.ChannelId
+			lastChannelProcessed = chanToSync.DbChannelData.ChannelId
 			shouldNotCount := false
-			logUtils.SendInfoToSlack("Syncing %s (%s) to LBRY! total processed channels since startup: %d", sync.DbChannelData.DesiredChannelName, sync.DbChannelData.ChannelId, syncCount+1)
-			err := sync.FullCycle()
+			logUtils.SendInfoToSlack("Syncing %s (%s) to LBRY! total processed channels since startup: %d", chanToSync.DbChannelData.DesiredChannelName, chanToSync.DbChannelData.ChannelId, syncCount+1)
+			err := chanToSync.FullCycle()
 
 			if err != nil {
 				if strings.Contains(err.Error(), "quotaExceeded") {
@@ -164,24 +171,16 @@ func (s *SyncManager) Start() error {
 			if err != nil {
 				return errors.Prefix("@Nikooo777 something went wrong while reflecting blobs", err)
 			}
-			logUtils.SendInfoToSlack("%s (%s) reached an end. Total processed channels since startup: %d", sync.DbChannelData.DesiredChannelName, sync.DbChannelData.ChannelId, syncCount+1)
+			logUtils.SendInfoToSlack("%s (%s) reached an end. Total processed channels since startup: %d", chanToSync.DbChannelData.DesiredChannelName, chanToSync.DbChannelData.ChannelId, syncCount+1)
 			if !shouldNotCount {
 				syncCount++
-			}
-
-			updateAvailable := false
-			if _, err := os.Stat(".update"); err == nil {
-				if err := os.Remove(".update"); err != nil {
-					log.Errorf("something went wrong while trying to remove the .update file: %s", errors.FullTrace(err))
-				}
-				updateAvailable = true
 			}
 
 			if _, err := os.Stat(".freeze"); err == nil {
 				break
 			}
 
-			if updateAvailable || sync.IsInterrupted() || (s.CliFlags.Limit != 0 && syncCount >= s.CliFlags.Limit) {
+			if chanToSync.IsInterrupted() || (s.CliFlags.Limit != 0 && syncCount >= s.CliFlags.Limit) {
 				shouldInterruptLoop = true
 				break
 			}
