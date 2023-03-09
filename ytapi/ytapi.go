@@ -1,25 +1,24 @@
 package ytapi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/lbryio/ytsync/v5/shared"
-	logUtils "github.com/lbryio/ytsync/v5/util"
-	"github.com/vbauerster/mpb/v7"
-
-	"github.com/lbryio/ytsync/v5/downloader/ytdl"
-
 	"github.com/lbryio/ytsync/v5/downloader"
+	"github.com/lbryio/ytsync/v5/downloader/ytdl"
 	"github.com/lbryio/ytsync/v5/ip_manager"
 	"github.com/lbryio/ytsync/v5/sdk"
+	"github.com/lbryio/ytsync/v5/shared"
 	"github.com/lbryio/ytsync/v5/sources"
+	logUtils "github.com/lbryio/ytsync/v5/util"
 
 	"github.com/lbryio/lbry.go/v2/extras/errors"
 	"github.com/lbryio/lbry.go/v2/extras/jsonrpc"
@@ -27,6 +26,7 @@ import (
 	"github.com/lbryio/lbry.go/v2/extras/util"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/vbauerster/mpb/v7"
 )
 
 type Video interface {
@@ -123,28 +123,51 @@ func GetVideosToSync(channelID string, syncedVideos map[string]sdk.SyncedVideo, 
 	return videos, nil
 }
 
-func ChannelInfo(channelID string, attemptNo int) (*YoutubeStatsResponse, error) {
+func ChannelInfo(channelID string, attemptNo int, ipPool *ip_manager.IPPool) (*YoutubeStatsResponse, error) {
 	url := "https://www.youtube.com/channel/" + channelID + "/about"
-
 	req, _ := http.NewRequest("GET", url, nil)
-
 	req.Header.Add("User-Agent", downloader.ChromeUA)
 	req.Header.Add("Accept", "*/*")
 
-	res, err := http.DefaultClient.Do(req)
+	ip, err := ipPool.GetIP("channelinfo")
+	if err != nil {
+		return nil, err
+	}
+	defer ipPool.ReleaseIP(ip)
+	sourceIP := net.ParseIP(ip)
+	// create a transport object with the desired source IP address
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			// use the desired source IP address in the Dialer
+			dialer := &net.Dialer{
+				LocalAddr: &net.TCPAddr{IP: sourceIP},
+			}
+			return dialer.DialContext(ctx, network, addr)
+		},
+	}
+
+	// create a new http.Client with the transport object
+	client := &http.Client{
+		Transport: transport,
+	}
+
+	// make the request with the client object
+	res, err := client.Do(req)
 	if err != nil {
 		return nil, errors.Err(err)
 	}
 	defer res.Body.Close()
+
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, errors.Err(err)
 	}
 	pageBody := string(body)
 	if strings.Contains(pageBody, "Our systems have detected unusual traffic from your computer network") {
-		log.Warnf("we got blocked by youtube, waiting %d hour(s) before attempt %d", attemptNo+1, attemptNo+2)
+		ipPool.SetThrottled(ip)
+		log.Warnf("we got blocked by youtube on IP %s, waiting %d hour(s) before attempt %d", ip, attemptNo+1, attemptNo+2)
 		time.Sleep(time.Duration(attemptNo) * time.Hour)
-		return ChannelInfo(channelID, attemptNo+1)
+		return ChannelInfo(channelID, attemptNo+1, nil)
 	}
 	dataStartIndex := strings.Index(pageBody, "window[\"ytInitialData\"] = ") + 26
 	if dataStartIndex == 25 {

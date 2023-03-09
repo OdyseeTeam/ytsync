@@ -10,6 +10,7 @@ import (
 	"github.com/lbryio/lbry.go/v2/extras/errors"
 	"github.com/lbryio/lbry.go/v2/extras/jsonrpc"
 	"github.com/lbryio/lbry.go/v2/extras/util"
+	"github.com/lbryio/ytsync/v5/ip_manager"
 	"github.com/lbryio/ytsync/v5/shared"
 	"github.com/lbryio/ytsync/v5/timing"
 	logUtils "github.com/lbryio/ytsync/v5/util"
@@ -430,13 +431,13 @@ func (s *Sync) ensureChannelOwnership() error {
 			return err
 		}
 	}
-
-	channelInfo, err := ytapi.ChannelInfo(s.DbChannelData.ChannelId, 0)
+	ipPool, _ := ip_manager.GetIPPool(s.grp)
+	channelInfo, err := ytapi.ChannelInfo(s.DbChannelData.ChannelId, 0, ipPool)
 	if err != nil {
 		if strings.Contains(err.Error(), "invalid character 'e' looking for beginning of value") {
 			logUtils.SendInfoToSlack("failed to get channel data for %s. Waiting 1 minute to retry", s.DbChannelData.ChannelId)
 			time.Sleep(1 * time.Minute)
-			channelInfo, err = ytapi.ChannelInfo(s.DbChannelData.ChannelId, 1)
+			channelInfo, err = ytapi.ChannelInfo(s.DbChannelData.ChannelId, 1, ipPool)
 			if err != nil {
 				return err
 			}

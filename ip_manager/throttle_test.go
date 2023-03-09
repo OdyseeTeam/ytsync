@@ -2,20 +2,23 @@ package ip_manager
 
 import (
 	"testing"
+
+	"github.com/lbryio/lbry.go/v2/extras/stop"
 )
 
 func TestAll(t *testing.T) {
-	pool, err := GetIPPool()
+	stopGroup := stop.New()
+	pool, err := GetIPPool(stopGroup)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ip, err := pool.GetIP()
+	ip, err := pool.GetIP("test")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Log(ip)
 	pool.ReleaseIP(ip)
-	ip2, err := pool.GetIP()
+	ip2, err := pool.GetIP("test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -26,12 +29,12 @@ func TestAll(t *testing.T) {
 	pool.ReleaseIP(ip2)
 
 	for range pool.ips {
-		_, err = pool.GetIP()
+		_, err = pool.GetIP("test")
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	next, err := pool.nextIP()
+	next, err := pool.nextIP("test")
 	if err != nil {
 		t.Logf("%s", err.Error())
 	} else {
