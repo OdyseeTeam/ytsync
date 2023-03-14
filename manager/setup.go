@@ -431,7 +431,10 @@ func (s *Sync) ensureChannelOwnership() error {
 			return err
 		}
 	}
-	ipPool, _ := ip_manager.GetIPPool(s.grp)
+	ipPool, err := ip_manager.GetIPPool(s.grp)
+	if err != nil {
+		return err
+	}
 	channelInfo, err := ytapi.ChannelInfo(s.DbChannelData.ChannelId, 0, ipPool)
 	if err != nil {
 		if strings.Contains(err.Error(), "invalid character 'e' looking for beginning of value") {
@@ -530,7 +533,7 @@ func (s *Sync) ensureChannelOwnership() error {
 	return s.Manager.ApiConfig.SetChannelClaimID(s.DbChannelData.ChannelId, s.DbChannelData.ChannelClaimID)
 }
 
-//getChannelClaimIDForTimedOutCreation is a raw function that returns the only channel that exists in the wallet
+// getChannelClaimIDForTimedOutCreation is a raw function that returns the only channel that exists in the wallet
 // this is used because the SDK sucks and can't figure out when to return when creating a claim...
 func (s *Sync) getChannelClaimIDForTimedOutCreation() (string, error) {
 	channels, err := s.daemon.ChannelList(nil, 1, 500, nil)
