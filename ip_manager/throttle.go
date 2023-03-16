@@ -152,8 +152,8 @@ func (i *IPPool) ReleaseAll() {
 	}
 }
 
-//SetThrottled sets the throttled flag for the provided IP and schedules its unban for a future time
-//todo: this might introduce a leak if the ip is removed from the pool while it's throttled (this would be for the VPN interface)
+// SetThrottled sets the throttled flag for the provided IP and schedules its unban for a future time
+// todo: this might introduce a leak if the ip is removed from the pool while it's throttled (this would be for the VPN interface)
 func (i *IPPool) SetThrottled(ip string) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
@@ -193,6 +193,12 @@ var ErrResourceLock = errors.Base("error getting next ip, did you forget to lock
 var ErrInterruptedByUser = errors.Base("interrupted by user")
 
 func (i *IPPool) nextIP(forVideo string) (*throttledIP, error) {
+	if i == nil {
+		util.SendErrorToSlack("ip pool is nil")
+	}
+	if i.lock == nil {
+		util.SendErrorToSlack("ip pool lock is nil")
+	}
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
