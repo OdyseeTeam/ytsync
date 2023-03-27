@@ -761,7 +761,7 @@ func (v *YoutubeVideo) downloadAndPublish(daemon *jsonrpc.Client, params SyncPar
 	if v.youtubeInfo.IsLive == true {
 		return nil, errors.Err("video is a live stream and hasn't completed yet")
 	}
-	if v.youtubeInfo.Availability != "public" {
+	if v.youtubeInfo.Availability != "public" && v.youtubeInfo.Availability != "needs_auth" {
 		return nil, errors.Err("video is not public")
 	}
 	if dur > v.maxVideoLength {
