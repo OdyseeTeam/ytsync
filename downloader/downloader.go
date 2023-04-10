@@ -32,6 +32,9 @@ func GetPlaylistVideoIDs(channelName string, maxVideos int, stopChan stop.Chan, 
 			if strings.Contains(err.Error(), "This channel does not have a") {
 				continue
 			}
+			if strings.Contains(err.Error(), "Incomplete data received") {
+				continue
+			}
 			return nil, errors.Err(err)
 		}
 		for i, v := range ids {
