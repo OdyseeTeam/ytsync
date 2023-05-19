@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"sort"
@@ -158,7 +158,7 @@ func ChannelInfo(channelID string, attemptNo int, ipPool *ip_manager.IPPool) (*Y
 	}
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, errors.Err(err)
 	}
@@ -173,7 +173,7 @@ func ChannelInfo(channelID string, attemptNo int, ipPool *ip_manager.IPPool) (*Y
 	if dataStartIndex == 25 {
 		dataStartIndex = strings.Index(pageBody, "var ytInitialData = ") + 20
 	}
-	dataEndIndex := strings.Index(pageBody, "]}}};") + 4
+	dataEndIndex := strings.Index(pageBody, "]}}};</script>") + 4
 	if dataEndIndex < dataStartIndex {
 		return nil, errors.Err("start index is lower than end index. cannot extract channel info!")
 	}

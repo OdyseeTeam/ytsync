@@ -584,8 +584,8 @@ func (s *Sync) mapFromClaims(claims []jsonrpc.Claim) map[string]ytsyncClaim {
 	return videoIDMap
 }
 
-//updateRemoteDB counts the amount of videos published so far and updates the remote db if some videos weren't marked as published
-//additionally it removes all entries in the database indicating that a video is published when it's actually not
+// updateRemoteDB counts the amount of videos published so far and updates the remote db if some videos weren't marked as published
+// additionally it removes all entries in the database indicating that a video is published when it's actually not
 func (s *Sync) updateRemoteDB(claims []jsonrpc.Claim, ownClaims []jsonrpc.Claim) (total, fixed, removed int, err error) {
 	allClaimsInfo := s.mapFromClaims(claims)
 	ownClaimsInfo := s.mapFromClaims(ownClaims)
@@ -661,7 +661,7 @@ func (s *Sync) updateRemoteDB(claims []jsonrpc.Claim, ownClaims []jsonrpc.Claim)
 	}
 
 	for vID, sv := range s.syncedVideos {
-		if sv.Transferred || sv.IsLbryFirst {
+		if sv.Transferred {
 			_, ok := allClaimsInfo[vID]
 			if !ok && sv.Published {
 				searchResponse, err := s.daemon.ClaimSearch(jsonrpc.ClaimSearchArgs{
@@ -677,11 +677,7 @@ func (s *Sync) updateRemoteDB(claims []jsonrpc.Claim, ownClaims []jsonrpc.Claim)
 					log.Debugf("%s: was transferred but appears abandoned! we should ignore this - claimID: %s", vID, sv.ClaimID)
 					continue //TODO: we should flag these on the db
 				} else {
-					if sv.IsLbryFirst {
-						log.Debugf("%s: was published using lbry-first so we don't want to do anything here! - claimID: %s", vID, sv.ClaimID)
-					} else {
-						log.Debugf("%s: was transferred and was then edited! we should ignore this - claimID: %s", vID, sv.ClaimID)
-					}
+					log.Debugf("%s: was transferred and was then edited! we should ignore this - claimID: %s", vID, sv.ClaimID)
 					//return count, fixed, 0, errors.Err("%s: isn't our control but is on the database and on the blockchain. wtf is up? ClaimID: %s", vID, sv.ClaimID)
 				}
 			}
@@ -1111,7 +1107,7 @@ func (s *Sync) importPublicKey() error {
 	return nil
 }
 
-//TODO: fully implement this once I find a way to reliably get the abandoned supports amount
+// TODO: fully implement this once I find a way to reliably get the abandoned supports amount
 func (s *Sync) getUnsentSupports() (float64, error) {
 	defaultAccount, err := s.getDefaultAccount()
 	if err != nil {

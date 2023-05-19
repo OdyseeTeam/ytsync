@@ -3,6 +3,7 @@ package downloader
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -74,7 +75,7 @@ func GetVideoInformation(videoID string, stopChan stop.Chan, pool *ip_manager.IP
 	// defer the closing of our jsonFile so that we can parse it later on
 	defer f.Close()
 	// read our opened jsonFile as a byte array.
-	byteValue, _ := ioutil.ReadAll(f)
+	byteValue, _ := io.ReadAll(f)
 
 	var video *ytdl.YtdlVideo
 	err = json.Unmarshal(byteValue, &video)
@@ -87,7 +88,7 @@ func GetVideoInformation(videoID string, stopChan stop.Chan, pool *ip_manager.IP
 
 const (
 	GoogleBotUA             = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-	ChromeUA                = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36"
+	ChromeUA                = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/113.0.0.0 Safari/537.36"
 	maxAttempts             = 3
 	extractionError         = "YouTube said: Unable to extract video data"
 	throttledError          = "HTTP Error 429"
