@@ -32,7 +32,6 @@ type Configs struct {
 	UseVpn                bool      `json:"use_vpn"`
 	WalletS3Config        S3Configs `json:"wallet_s3_config"`
 	BlockchaindbS3Config  S3Configs `json:"blockchaindb_s3_config"`
-	AWSThumbnailsS3Config S3Configs `json:"aws_thumbnails_s3_config"`
 	ThumbnailsS3Config    S3Configs `json:"thumbnails_s3_config"`
 }
 

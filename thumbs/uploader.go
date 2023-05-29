@@ -112,7 +112,7 @@ func MirrorThumbnail(url string, name string) (string, error) {
 	tu := thumbnailUploader{
 		originalUrl: url,
 		name:        name,
-		s3Config:    *configs.Configuration.AWSThumbnailsS3Config.GetS3AWSConfig(),
+		s3Config:    *configs.Configuration.ThumbnailsS3Config.GetS3AWSConfig(),
 	}
 	err := tu.downloadThumbnail()
 	if err != nil {
@@ -121,17 +121,6 @@ func MirrorThumbnail(url string, name string) (string, error) {
 	defer tu.deleteTmpFile()
 
 	err = tu.uploadThumbnail()
-	if err != nil {
-		return "", err
-	}
-
-	//this is our own S3 storage
-	tu2 := thumbnailUploader{
-		originalUrl: url,
-		name:        name,
-		s3Config:    *configs.Configuration.ThumbnailsS3Config.GetS3AWSConfig(),
-	}
-	err = tu2.uploadThumbnail()
 	if err != nil {
 		return "", err
 	}
