@@ -2,7 +2,7 @@ package sources
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -48,8 +48,8 @@ func rawDownload(args []string, dir string) (*DownloadResults, error) {
 	}
 	monitorStopGrp := stop.New()
 	go detectSlowDownload(dir, monitorStopGrp, cmd)
-	errorLog, _ := ioutil.ReadAll(stderr)
-	outLog, _ := ioutil.ReadAll(stdout)
+	errorLog, _ := io.ReadAll(stderr)
+	outLog, _ := io.ReadAll(stdout)
 	err = cmd.Wait()
 	monitorStopGrp.Stop()
 	parsedFailure := parseFailureReason(string(errorLog))

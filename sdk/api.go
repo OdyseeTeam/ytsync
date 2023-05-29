@@ -3,7 +3,7 @@ package sdk
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -81,7 +81,7 @@ func (a *APIConfig) FetchChannels(status string, cliFlags *shared.SyncFlags) ([]
 		return a.FetchChannels(status, cliFlags)
 	}
 	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	if res.StatusCode != http.StatusOK {
 		util.SendErrorToSlack("Error %d while trying to call %s. Waiting to retry", res.StatusCode, endpoint)
 		log.Debugln(string(body))
@@ -140,7 +140,7 @@ func (a *APIConfig) SetChannelCert(certHex string, channelID string) error {
 		return a.SetChannelCert(certHex, channelID)
 	}
 	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	if res.StatusCode != http.StatusOK {
 		util.SendErrorToSlack("Error %d while trying to call %s. Waiting to retry", res.StatusCode, endpoint)
 		log.Debugln(string(body))
@@ -185,7 +185,7 @@ func (a *APIConfig) SetChannelStatus(channelID string, status string, failureRea
 		return a.SetChannelStatus(channelID, status, failureReason, transferState)
 	}
 	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	if res.StatusCode >= http.StatusInternalServerError {
 		util.SendErrorToSlack("Error %d while trying to call %s. Waiting to retry", res.StatusCode, endpoint)
 		log.Debugln(string(body))
@@ -232,7 +232,7 @@ func (a *APIConfig) SetChannelClaimID(channelID string, channelClaimID string) e
 		return a.SetChannelClaimID(channelID, channelClaimID)
 	}
 	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	if res.StatusCode != http.StatusOK {
 		util.SendErrorToSlack("Error %d while trying to call %s. Waiting to retry", res.StatusCode, endpoint)
 		log.Debugln(string(body))
@@ -273,7 +273,7 @@ func (a *APIConfig) DeleteVideos(videos []string) error {
 		return a.DeleteVideos(videos)
 	}
 	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	if res.StatusCode != http.StatusOK {
 		util.SendErrorToSlack("Error %d while trying to call %s. Waiting to retry", res.StatusCode, endpoint)
 		log.Debugln(string(body))
@@ -336,7 +336,7 @@ func (a *APIConfig) MarkVideoStatus(status shared.VideoStatus) error {
 		return a.MarkVideoStatus(status)
 	}
 	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	if res.StatusCode != http.StatusOK {
 		util.SendErrorToSlack("Error %d while trying to call %s. Waiting to retry", res.StatusCode, endpoint)
 		log.Debugln(string(body))
@@ -375,7 +375,7 @@ func (a *APIConfig) VideoState(videoID string) (string, error) {
 		return a.VideoState(videoID)
 	}
 	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	if res.StatusCode == http.StatusNotFound {
 		return "not_found", nil
 	}
@@ -426,7 +426,7 @@ func (a *APIConfig) GetReleasedDate(videoID string) (*VideoRelease, error) {
 		return a.GetReleasedDate(videoID)
 	}
 	defer res.Body.Close()
-	body, _ := ioutil.ReadAll(res.Body)
+	body, _ := io.ReadAll(res.Body)
 	if res.StatusCode == http.StatusNotFound {
 		return nil, nil
 	}

@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -193,12 +193,12 @@ func checkCookiesIntegrity() error {
 	}
 	if fi.Size() == 0 {
 		log.Errorf("cookies were cleared out. Attempting a restore from cookies-backup.txt")
-		input, err := ioutil.ReadFile("cookies-backup.txt")
+		input, err := os.ReadFile("cookies-backup.txt")
 		if err != nil {
 			return errors.Err(err)
 		}
 
-		err = ioutil.WriteFile("cookies.txt", input, 0644)
+		err = os.WriteFile("cookies.txt", input, 0644)
 		if err != nil {
 			return errors.Err(err)
 		}
@@ -348,8 +348,8 @@ func (v *YoutubeVideo) download() error {
 		//ticker2 := time.NewTicker(10 * time.Second)
 		//v.monitorSlowDownload(ticker, dlStopGrp, sourceAddress, cmd)
 
-		errorLog, _ := ioutil.ReadAll(stderr)
-		outLog, _ := ioutil.ReadAll(stdout)
+		errorLog, _ := io.ReadAll(stderr)
+		outLog, _ := io.ReadAll(stdout)
 		err = cmd.Wait()
 
 		//stop the progress bar
@@ -428,7 +428,7 @@ func (v *YoutubeVideo) trackProgressBar(argsWithFilters []string, metadata *ytMe
 		log.Errorf("error while getting final file size: %s", errors.FullTrace(err))
 		return
 	}
-	outLog, _ := ioutil.ReadAll(stdout)
+	outLog, _ := io.ReadAll(stdout)
 	err = cmd.Wait()
 	output := string(outLog)
 	parts := strings.Split(output, ": ")
@@ -597,7 +597,7 @@ func parseVideoMetadata(metadataPath string) (*ytMetadata, error) {
 	// defer the closing of our jsonFile so that we can parse it later on
 	defer f.Close()
 	// read our opened jsonFile as a byte array.
-	byteValue, _ := ioutil.ReadAll(f)
+	byteValue, _ := io.ReadAll(f)
 
 	// we initialize our Users array
 	var m ytMetadata
@@ -616,20 +616,20 @@ func (v *YoutubeVideo) videoDir() string {
 }
 
 func (v *YoutubeVideo) getDownloadedPath() (string, error) {
-	files, err := ioutil.ReadDir(v.videoDir())
-	log.Infoln(v.videoDir())
+	entries, err := os.ReadDir(v.videoDir())
 	if err != nil {
-		err = errors.Prefix("list error", err)
-		log.Errorln(err)
-		return "", err
+		return "", errors.Prefix("list error", err)
 	}
-
-	for _, f := range files {
-		if f.IsDir() {
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil {
+			return "", errors.Err(err)
+		}
+		if info.IsDir() {
 			continue
 		}
-		if strings.Contains(v.getFullPath(), strings.TrimSuffix(f.Name(), filepath.Ext(f.Name()))) {
-			return path.Join(v.videoDir(), f.Name()), nil
+		if strings.Contains(v.getFullPath(), strings.TrimSuffix(info.Name(), filepath.Ext(info.Name()))) {
+			return path.Join(v.videoDir(), info.Name()), nil
 		}
 	}
 	return "", errors.Err("could not find any downloaded videos")

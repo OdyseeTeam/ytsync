@@ -2,7 +2,6 @@ package blobs_reflector
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/user"
@@ -31,7 +30,7 @@ func ReflectAndClean() error {
 func loadConfig(path string) (cmd.Config, error) {
 	var c cmd.Config
 
-	raw, err := ioutil.ReadFile(path)
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return c, errors.Err("config file not found")

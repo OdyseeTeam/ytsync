@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -157,11 +156,11 @@ func runCmd(cmd *exec.Cmd, stopChan stop.Chan) ([]string, error) {
 	if err != nil {
 		return nil, errors.Err(err)
 	}
-	outLog, err := ioutil.ReadAll(stdout)
+	outLog, err := io.ReadAll(stdout)
 	if err != nil {
 		return nil, errors.Err(err)
 	}
-	errorLog, err := ioutil.ReadAll(stderr)
+	errorLog, err := io.ReadAll(stderr)
 	if err != nil {
 		return nil, errors.Err(err)
 	}

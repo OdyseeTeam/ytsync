@@ -2,7 +2,6 @@ package manager
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -213,7 +212,7 @@ func (s *Sync) FullCycle() (e error) {
 		return errors.Prefix("failure in downloading blockchain.db", err)
 	}
 
-	s.videoDirectory, err = ioutil.TempDir(os.Getenv("TMP_DIR"), "ytsync")
+	s.videoDirectory, err = os.MkdirTemp(os.Getenv("TMP_DIR"), "ytsync")
 	if err != nil {
 		return errors.Wrap(err, 0)
 	}
