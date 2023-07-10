@@ -123,15 +123,20 @@ func (s *Sync) setStatusSyncing() error {
 var stopGroup = stop.New()
 var running = false
 
-func (s *Sync) CheckVpn() {
+func (s *Sync) CheckVpn(vpnStopper *stop.Group) {
 	if running {
 		return
 	}
 	running = true
+	defer func() {
+		running = false
+	}()
 	consecutiveFailures := 0
 	for {
 		select {
 		case <-s.grp.Ch():
+			return
+		case <-vpnStopper.Ch():
 			return
 		default:
 			if !s.state.vpnStarted {
@@ -228,7 +233,9 @@ func (s *Sync) FullCycle() (e error) {
 			return err
 		}
 		s.state.vpnStarted = true
-		//go s.CheckVpn()
+		stopper := stop.New()
+		defer stopper.Stop()
+		go s.CheckVpn(stopper)
 	}
 
 	//TODO: THIS IS A TEMPORARY WORK AROUND FOR THE STUPID IP LOCKUP BUG
