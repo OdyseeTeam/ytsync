@@ -187,7 +187,7 @@ func parseOutLog(outLog string) error {
 	return nil
 }
 
-func (v *YoutubeVideo) Xdownload() error {
+func (v *YoutubeVideo) Download() error {
 	start := time.Now()
 	defer func(start time.Time) {
 		timing.TimedComponent("download").Add(time.Since(start))
@@ -239,7 +239,6 @@ func (v *YoutubeVideo) Xdownload() error {
 	}
 
 	ytdlArgs := []string{
-		fmt.Sprintf("https://www.youtube.com/watch?v=%s", v.id),
 		"--no-progress",
 		"-o" + strings.TrimSuffix(v.getFullPath(), ".mp4"),
 		"--merge-output-format",
