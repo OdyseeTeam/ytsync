@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -189,12 +190,18 @@ func (s *Sync) FullCycle() (e error) {
 	interruptChan := make(chan os.Signal, 1)
 	signal.Notify(interruptChan, os.Interrupt, syscall.SIGTERM)
 	defer signal.Stop(interruptChan)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel() // cancel when FullCycle exits
 	go func() {
-		<-interruptChan
-		util.SendToSlack("got interrupt, shutting down")
-		log.Println("Got interrupt signal, shutting down (if publishing, will shut down after current publish)")
-		s.grp.Stop()
-		time.Sleep(5 * time.Second)
+		select {
+		case <-interruptChan:
+			util.SendToSlack("got interrupt, shutting down")
+			log.Println("Got interrupt signal, shutting down (if publishing, will shut down after current publish)")
+			s.grp.Stop()
+			time.Sleep(5 * time.Second)
+		case <-ctx.Done(): // this case is executed when the context is cancelled
+			return
+		}
 	}()
 	err := s.setStatusSyncing()
 	if err != nil {
