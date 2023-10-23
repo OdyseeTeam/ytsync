@@ -284,7 +284,7 @@ func (v *YoutubeVideo) Download() error {
 			}
 			defer v.pool.ReleaseIP(sourceAddress)
 			quality := qualities[qualityIndex]
-			dynamicArgs := append(ytdlArgs, "-fbestvideo[ext=mp4][vcodec!*=av01][vcodec!*=vp09][height<="+quality+"]+bestaudio[ext!=webm][format_id!=258][format_id!=380][format_id!=251][format_id!=256][format_id!=327][format_id!=328][format_id!=380]")
+			dynamicArgs := append(ytdlArgs, "-fbestvideo[ext=mp4][vcodec!*=av01][vcodec!*=vp09][height<="+quality+"]+bestaudio[ext!=webm][format_id!*=258][format_id!*=380][format_id!*=251][format_id!*=256][format_id!*=327][format_id!*=328][format_id!*=380]")
 			dynamicArgs = append(dynamicArgs, userAgent...)
 			dynamicArgs = append(dynamicArgs,
 				"--source-address",
