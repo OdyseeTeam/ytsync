@@ -185,7 +185,10 @@ func (a *APIConfig) SetChannelStatus(channelID string, status string, failureRea
 		return a.SetChannelStatus(channelID, status, failureReason, transferState)
 	}
 	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, nil, errors.Err(err)
+	}
 	if res.StatusCode >= http.StatusInternalServerError {
 		util.SendErrorToSlack("Error %d while trying to call %s. Waiting to retry", res.StatusCode, endpoint)
 		log.Debugln(string(body))
