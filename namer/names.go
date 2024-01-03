@@ -10,7 +10,7 @@ import (
 	"sync"
 )
 
-var claimNameRegexp = regexp.MustCompile(`[=&#:$@*%？?;、\\"/<>%{}|｜^~\x60[\]\s]`)
+var claimNameRegexp = regexp.MustCompile(`[ =&#:$@*%？?;、\\"/<>%{}|｜^~\x60[\]\s]`)
 
 type Namer struct {
 	mu    *sync.Mutex
@@ -42,7 +42,7 @@ func (n *Namer) GetNextName(prefix string) string {
 		attempt++
 	}
 
-	//if for some reasons the title can't be converted in a valid claim name (too short or not latin) then we use a hash
+	//if for some reason the title can't be converted in a valid claim name (too short or not latin) then we use a hash
 	attempt = 1
 	if len(name) < 2 {
 		sum := md5.Sum([]byte(prefix))
