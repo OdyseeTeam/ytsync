@@ -239,6 +239,7 @@ func (v *YoutubeVideo) Download() error {
 	}
 
 	ytdlArgs := []string{
+		"--no-warnings",
 		"--no-progress",
 		"-o" + strings.TrimSuffix(v.getFullPath(), ".mp4"),
 		"--merge-output-format",

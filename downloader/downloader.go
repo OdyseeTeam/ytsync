@@ -55,6 +55,7 @@ const releaseTimeFormat = "2006-01-02, 15:04:05 (MST)"
 func GetVideoInformation(videoID string, stopChan stop.Chan, pool *ip_manager.IPPool) (*ytdl.YtdlVideo, error) {
 	args := []string{
 		"--skip-download",
+		"--no-warnings",
 		"--write-info-json",
 		fmt.Sprintf("https://www.youtube.com/watch?v=%s", videoID),
 		"--cookies",
@@ -87,7 +88,7 @@ func GetVideoInformation(videoID string, stopChan stop.Chan, pool *ip_manager.IP
 
 const (
 	GoogleBotUA             = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-	ChromeUA                = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
+	ChromeUA                = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 	maxAttempts             = 3
 	extractionError         = "YouTube said: Unable to extract video data"
 	throttledError          = "HTTP Error 429"
