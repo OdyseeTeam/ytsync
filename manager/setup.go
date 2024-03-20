@@ -449,6 +449,10 @@ func (s *Sync) ensureChannelOwnership() error {
 		}
 	}
 
+	if len(channelInfo.Header.C4TabbedHeaderRenderer.Avatar.Thumbnails) == 0 {
+		return errors.Err("no thumbnails found for channel")
+	}
+
 	thumbnail := channelInfo.Header.C4TabbedHeaderRenderer.Avatar.Thumbnails[len(channelInfo.Header.C4TabbedHeaderRenderer.Avatar.Thumbnails)-1].URL
 	thumbnailURL, err := thumbs.MirrorThumbnail(thumbnail, s.DbChannelData.ChannelId)
 	if err != nil {
