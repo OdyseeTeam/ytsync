@@ -176,7 +176,7 @@ func ChannelInfo(channelID string, attemptNo int, ipPool *ip_manager.IPPool) (*Y
 	// get end index by matching pattern AFTER the start index
 	dataEndIndex := strings.Index(pageBody[dataStartIndex:], ";</script>") + dataStartIndex
 	//dataEndIndex := strings.Index(pageBody, "}]}}};</script>") + 5
-	if dataEndIndex == dataStartIndex {
+	if dataEndIndex <= dataStartIndex {
 		return nil, errors.Err("start index is lower than end index. cannot extract channel info!")
 	}
 	data := pageBody[dataStartIndex:dataEndIndex]

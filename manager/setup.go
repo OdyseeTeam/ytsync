@@ -402,16 +402,15 @@ func (s *Sync) ensureChannelOwnership() error {
 		return errors.Err("the database has a channel recorded (%s) but nothing was found in our control", s.DbChannelData.ChannelClaimID)
 	}
 
+	if s.DbChannelData.IsDeletedOnYoutube || s.DbChannelData.TransferState == shared.TransferStateComplete {
+		return nil
+	}
 	channelUsesOldMetadata := false
 	if channelToUse != nil {
 		channelUsesOldMetadata = channelToUse.Value.GetThumbnail() == nil || (len(channelToUse.Value.GetLanguages()) == 0 && s.DbChannelData.Language != "")
 		if !channelUsesOldMetadata {
 			return nil
 		}
-	}
-
-	if s.DbChannelData.IsDeletedOnYoutube {
-		return nil
 	}
 
 	balanceResp, err := s.daemon.AccountBalance(nil)
