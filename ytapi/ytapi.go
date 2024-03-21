@@ -185,6 +185,12 @@ func ChannelInfo(channelID string, attemptNo int, ipPool *ip_manager.IPPool) (*Y
 	if err != nil {
 		return nil, errors.Err(err)
 	}
+	if decodedResponse.Header.C4TabbedHeaderRenderer.Avatar.Thumbnails == nil || len(decodedResponse.Header.C4TabbedHeaderRenderer.Avatar.Thumbnails) == 0 {
+		decodedResponse.Header.C4TabbedHeaderRenderer.Avatar.Thumbnails = decodedResponse.Header.PageHeaderRenderer.Content.PageHeaderViewModel.Image.DecoratedAvatarViewModel.Avatar.AvatarViewModel.Image.Sources
+	}
+	if decodedResponse.Header.C4TabbedHeaderRenderer.Banner.Thumbnails == nil || len(decodedResponse.Header.C4TabbedHeaderRenderer.Banner.Thumbnails) == 0 {
+		decodedResponse.Header.C4TabbedHeaderRenderer.Banner.Thumbnails = decodedResponse.Header.PageHeaderRenderer.Content.PageHeaderViewModel.Banner.ImageBannerViewModel.Image.Sources
+	}
 
 	return &decodedResponse, nil
 }
@@ -227,6 +233,12 @@ func getVideos(channelID string, videoIDs []string, stopChan stop.Chan, ipPool *
 		videos = append(videos, video)
 	}
 	return videos, nil
+}
+
+type thumb struct {
+	URL    string `json:"url"`
+	Width  int    `json:"width"`
+	Height int    `json:"height"`
 }
 
 type YoutubeStatsResponse struct {
@@ -288,22 +300,60 @@ type YoutubeStatsResponse struct {
 		} `json:"twoColumnBrowseResultsRenderer"`
 	} `json:"contents"`
 	Header struct {
+		PageHeaderRenderer struct {
+			PageTitle string `json:"pageTitle"`
+			Content   struct {
+				PageHeaderViewModel struct {
+					Image struct {
+						DecoratedAvatarViewModel struct {
+							Avatar struct {
+								AvatarViewModel struct {
+									Image struct {
+										Sources   []thumb `json:"sources"`
+										Processor struct {
+											BorderImageProcessor struct {
+												Circular bool `json:"circular"`
+											} `json:"borderImageProcessor"`
+										} `json:"processor"`
+									} `json:"image"`
+									AvatarImageSize string `json:"avatarImageSize"`
+								} `json:"avatarViewModel"`
+							} `json:"avatar"`
+						} `json:"decoratedAvatarViewModel"`
+					} `json:"image"`
+					Banner struct {
+						ImageBannerViewModel struct {
+							Image struct {
+								Sources []thumb `json:"sources"`
+							} `json:"image"`
+							Style           string `json:"style"`
+							RendererContext struct {
+								LoggingContext struct {
+									LoggingDirectives struct {
+										TrackingParams string `json:"trackingParams"`
+										Visibility     struct {
+											Types string `json:"types"`
+										} `json:"visibility"`
+										ClientVeSpec struct {
+											UiType    int `json:"uiType"`
+											VeCounter int `json:"veCounter"`
+										} `json:"clientVeSpec"`
+									} `json:"loggingDirectives"`
+								} `json:"loggingContext"`
+							} `json:"rendererContext"`
+						} `json:"imageBannerViewModel"`
+					} `json:"banner"`
+				} `json:"pageHeaderViewModel"`
+			} `json:"content"`
+		} `json:"pageHeaderRenderer"`
 		C4TabbedHeaderRenderer struct {
 			ChannelID string `json:"channelId"`
 			Title     string `json:"title"`
 			Avatar    struct {
-				Thumbnails []struct {
-					URL    string `json:"url"`
-					Width  int    `json:"width"`
-					Height int    `json:"height"`
-				} `json:"thumbnails"`
+				Thumbnails []thumb `json:"thumbnails"`
 			} `json:"avatar"`
 			Banner struct {
-				Thumbnails []struct {
-					URL    string `json:"url"`
-					Width  int    `json:"width"`
-					Height int    `json:"height"`
-				} `json:"thumbnails"`
+				Thumbnails []thumb `json:"thumbnails"`
 			} `json:"banner"`
 			VisitTracking struct {
 				RemarketingPing string `json:"remarketingPing"`
