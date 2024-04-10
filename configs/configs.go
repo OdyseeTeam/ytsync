@@ -29,6 +29,7 @@ type Configs struct {
 	InternalApisEndpoint  string    `json:"internal_apis_endpoint"`
 	InternalApisAuthToken string    `json:"internal_apis_auth_token"`
 	LbrycrdString         string    `json:"lbrycrd_string"`
+	LoggingEndpoint       string    `json:"logging_endpoint"`
 	UseVpn                bool      `json:"use_vpn"`
 	WalletS3Config        S3Configs `json:"wallet_s3_config"`
 	BlockchaindbS3Config  S3Configs `json:"blockchaindb_s3_config"`

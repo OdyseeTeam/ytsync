@@ -4,6 +4,7 @@
   "internal_apis_endpoint": "http://localhost:15400",
   "internal_apis_auth_token": "ytsyntoken",
   "lbrycrd_string": "tcp://lbry:lbry@localhost:15200",
+  "logging_endpoint": "logging.domain.com:5555",
   "use_vpn": false,
   "wallet_s3_config": {
     "id": "",

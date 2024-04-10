@@ -531,6 +531,9 @@ func (s *Sync) ensureChannelOwnership() error {
 	if recoveredChannelClaimID != "" {
 		s.DbChannelData.ChannelClaimID = recoveredChannelClaimID
 	} else {
+		if len(c.Outputs) == 0 {
+			return errors.Err("no outputs found when updating channel - is the channel mistakenly flagged as non transferred in the database?")
+		}
 		s.DbChannelData.ChannelClaimID = c.Outputs[0].ClaimID
 	}
 	return s.Manager.ApiConfig.SetChannelClaimID(s.DbChannelData.ChannelId, s.DbChannelData.ChannelClaimID)

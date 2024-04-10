@@ -15,6 +15,7 @@ import (
 	"github.com/lbryio/ytsync/v5/timing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
 	"github.com/mitchellh/go-ps"
@@ -73,13 +74,13 @@ func GetLBRYNetContainer(all bool) (*types.Container, error) {
 }
 
 func getDockerContainer(name string, all bool) (*types.Container, error) {
-	cli, err := client.NewEnvClient()
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		panic(err)
 	}
-	filters := filters.NewArgs()
-	filters.Add("name", name)
-	containers, err := cli.ContainerList(context.Background(), types.ContainerListOptions{All: all, Filters: filters})
+	f := filters.NewArgs()
+	f.Add("name", name)
+	containers, err := cli.ContainerList(context.Background(), container.ListOptions{All: all, Filters: f})
 	if err != nil {
 		panic(err)
 	}
@@ -142,11 +143,11 @@ func ShouldCleanOnStartup() bool {
 
 func IsLbrynetRunning() (bool, error) {
 	if IsUsingDocker() {
-		container, err := GetLBRYNetContainer(ONLINE)
+		c, err := GetLBRYNetContainer(ONLINE)
 		if err != nil {
 			return false, err
 		}
-		return container != nil, nil
+		return c != nil, nil
 	}
 
 	processes, err := ps.Processes()
@@ -359,17 +360,17 @@ func StopDaemon() error {
 }
 
 func startDaemonViaDocker() error {
-	container, err := GetLBRYNetContainer(true)
+	c, err := GetLBRYNetContainer(true)
 	if err != nil {
 		return err
 	}
 
-	cli, err := client.NewEnvClient()
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		panic(err)
 	}
 
-	err = cli.ContainerStart(context.Background(), container.ID, types.ContainerStartOptions{})
+	err = cli.ContainerStart(context.Background(), c.ID, container.StartOptions{})
 	if err != nil {
 		return errors.Err(err)
 	}
@@ -377,17 +378,17 @@ func startDaemonViaDocker() error {
 }
 
 func restartDaemonViaDocker() error {
-	container, err := GetLBRYNetContainer(true)
+	c, err := GetLBRYNetContainer(true)
 	if err != nil {
 		return err
 	}
 
-	cli, err := client.NewEnvClient()
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		panic(err)
 	}
 
-	err = cli.ContainerRestart(context.Background(), container.ID, nil)
+	err = cli.ContainerRestart(context.Background(), c.ID, container.StopOptions{})
 	if err != nil {
 		return errors.Err(err)
 	}
@@ -395,17 +396,17 @@ func restartDaemonViaDocker() error {
 }
 
 func stopDaemonViaDocker() error {
-	container, err := GetLBRYNetContainer(ONLINE)
+	c, err := GetLBRYNetContainer(ONLINE)
 	if err != nil {
 		return err
 	}
 
-	cli, err := client.NewEnvClient()
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		panic(err)
 	}
 
-	err = cli.ContainerStop(context.Background(), container.ID, nil)
+	err = cli.ContainerStop(context.Background(), c.ID, container.StopOptions{})
 	if err != nil {
 		return errors.Err(err)
 	}
