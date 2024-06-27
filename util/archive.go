@@ -62,37 +62,38 @@ func addFileToTarWriter(filePath string, tarWriter *tar.Writer) error {
 	return nil
 }
 
-func Untar(tarball, target string) error {
+func Untar(tarball, target string) ([]string, error) {
 	reader, err := os.Open(tarball)
 	if err != nil {
-		return errors.Err(err)
+		return nil, errors.Err(err)
 	}
 	defer reader.Close()
 	tarReader := tar.NewReader(reader)
-
+	extractedFiles := make([]string, 0)
 	for {
 		header, err := tarReader.Next()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return errors.Err(err)
+			return nil, errors.Err(err)
 		}
 
 		path := filepath.Join(target, header.Name)
 		info := header.FileInfo()
 		if info.IsDir() {
 			if err = os.MkdirAll(path, info.Mode()); err != nil {
-				return errors.Err(err)
+				return nil, errors.Err(err)
 			}
 			continue
 		}
 
+		extractedFiles = append(extractedFiles, header.Name)
 		err = extractFile(path, info, tarReader)
 		if err != nil {
-			return err
+			return extractedFiles, err
 		}
 	}
-	return nil
+	return extractedFiles, nil
 }
 
 func extractFile(path string, info fs.FileInfo, tarReader *tar.Reader) error {

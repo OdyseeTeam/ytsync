@@ -146,9 +146,25 @@ func (s *Sync) downloadBlockchainDB() error {
 	}
 
 	blockchainDbDir := strings.Replace(defaultBDBPath, "blockchain.db", "", -1)
-	err = util.Untar(defaultTempBDBPath, blockchainDbDir)
+	extractedFileNames, err := util.Untar(defaultTempBDBPath, blockchainDbDir)
 	if err != nil {
 		return errors.Prefix("error extracting blockchain.db files", err)
+	}
+
+	for _, name := range extractedFileNames {
+		if !strings.HasSuffix(name, ".zst") {
+			continue
+		}
+		pathToCompressedFile := filepath.Join(blockchainDbDir, name)
+		err = util.Unzstd(pathToCompressedFile, blockchainDbDir)
+		if err != nil {
+			return errors.Prefix("error unzstding blockchain.db files", err)
+		}
+
+		err = os.Remove(pathToCompressedFile)
+		if err != nil {
+			return errors.Err("error removing %s: %s", pathToCompressedFile, err.Error())
+		}
 	}
 
 	log.Printf("blockchain.db data downloaded and extracted to %s", blockchainDbDir)
@@ -261,7 +277,19 @@ func (s *Sync) uploadBlockchainDB() error {
 		return errors.Err(err)
 	}
 	tarPath := strings.Replace(defaultBDBDir, "blockchain.db", "", -1) + s.DbChannelData.ChannelId + ".tar"
-	err = util.CreateTarball(tarPath, files)
+
+	err = util.ZstdCompressFiles(files)
+	if err != nil {
+		return err
+	}
+
+	compressedFileNames := make([]string, len(files))
+
+	for i, file := range files {
+		compressedFileNames[i] = file + ".zst"
+	}
+
+	err = util.CreateTarball(tarPath, compressedFileNames)
 	if err != nil {
 		return err
 	}
@@ -290,5 +318,18 @@ func (s *Sync) uploadBlockchainDB() error {
 	if err != nil {
 		return errors.Err(err)
 	}
-	return os.Remove(defaultBDBDir)
+
+	errStrings := make([]string, 0)
+
+	filesToDelete := append(files, compressedFileNames...)
+	for _, f := range filesToDelete {
+		err = os.Remove(f)
+		if err != nil {
+			errStrings = append(errStrings, err.Error())
+		}
+	}
+	if len(errStrings) > 0 {
+		return errors.Err(strings.Join(errStrings, "\n"))
+	}
+	return nil
 }

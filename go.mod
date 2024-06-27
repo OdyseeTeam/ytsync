@@ -9,22 +9,23 @@ replace gopkg.in/Graylog2/go-gelf.v2 => github.com/grafana/go-gelf/v2 v2.0.1
 require (
 	github.com/abadojack/whatlanggo v1.0.1
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/aws/aws-sdk-go v1.51.17
-	github.com/docker/docker v26.0.0+incompatible
+	github.com/aws/aws-sdk-go v1.54.10
+	github.com/docker/docker v27.0.2+incompatible
 	github.com/google/gops v0.3.28
+	github.com/klauspost/compress v1.17.9
 	github.com/lbryio/lbry.go/v2 v2.7.2-0.20230307181431-a01aa6dc0629
 	github.com/lbryio/reflector.go v1.1.3-0.20240409180046-de736b068d75
 	github.com/mitchellh/go-ps v1.0.0
 	github.com/prometheus-community/pro-bing v0.4.0
-	github.com/prometheus/client_golang v1.19.0
-	github.com/shopspring/decimal v1.3.1
+	github.com/prometheus/client_golang v1.19.1
+	github.com/shopspring/decimal v1.4.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/cobra v1.8.0
+	github.com/spf13/cobra v1.8.1
 	github.com/stretchr/testify v1.9.0
 	github.com/tkanos/gonfig v0.0.0-20210106201359-53e13348de2f
 	github.com/vbauerster/mpb/v7 v7.5.3
 	gopkg.in/Graylog2/go-gelf.v2 v2.0.0-20191017102106-1550ee647df0
-	gopkg.in/vansante/go-ffprobe.v2 v2.1.1
+	gopkg.in/vansante/go-ffprobe.v2 v2.2.0
 	gotest.tools v2.2.0+incompatible
 )
 
